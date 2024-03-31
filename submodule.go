@@ -8,6 +8,7 @@ import (
 // ConfigFn is a function that takes a pointer to a Submodule instance and returns a pointer to a Submodule instance.
 type Get[V any] interface {
 	Get(context.Context) (V, error)
+	getOrigin(context.Context) (V, error)
 }
 
 // Package submodule provides a set of utilities for managing submodules in a larger project.
@@ -16,6 +17,7 @@ type Get[V any] interface {
 // It also uses sync for ensuring thread safety.
 type Submodule[V any] struct {
 	factory func(context.Context) (V, error)
+	origin  func(context.Context) (V, error)
 }
 
 func (s *Submodule[V]) Get(ctx context.Context) (V, error) {
@@ -28,6 +30,19 @@ func (s *Submodule[V]) Get(ctx context.Context) (V, error) {
 			return c.Get(ctx)
 		}
 		return s.factory(ctx)
+	}
+}
+
+func (s *Submodule[V]) getOrigin(ctx context.Context) (V, error) {
+	select {
+	case <-ctx.Done():
+		var v V
+		return v, ctx.Err()
+	default:
+		if c, ok := ctx.Value(s).(*Submodule[V]); ok {
+			return c.getOrigin(ctx)
+		}
+		return s.origin(ctx)
 	}
 }
 
@@ -59,6 +74,7 @@ func Create[K any, C Submodule[K]](factory func(context.Context) (K, error), con
 
 	return &C{
 		factory: wf,
+		origin:  factory,
 	}
 }
 
@@ -76,13 +92,24 @@ func Derive[K any, D any, C *Submodule[K], DC Get[D]](
 	dep DC,
 	configs ...ConfigFn,
 ) C {
+	cf := buildConfig(configs...)
 	wf := func(ctx context.Context) (k K, e error) {
-		d, e := dep.Get(ctx)
-		if e != nil {
-			return
-		}
+		if cf.mode == Singleton {
+			d, e := dep.Get(ctx)
+			if e != nil {
+				return k, e
+			}
 
-		return factory(ctx, d)
+			return factory(ctx, d)
+		} else {
+			d, e := dep.getOrigin(ctx)
+			if e != nil {
+				return k, e
+			}
+
+			return factory(ctx, d)
+
+		}
 	}
 
 	return Create(wf, configs...)
@@ -94,18 +121,31 @@ func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any, RC *Submodule[R]](
 	c1 C1, c2 C2,
 	configs ...ConfigFn,
 ) RC {
+	cf := buildConfig(configs...)
 	wf := func(ctx context.Context) (r R, e error) {
-		v1, e := c1.Get(ctx)
-		if e != nil {
-			return r, e
-		}
+		if cf.mode == Singleton {
+			v1, e := c1.Get(ctx)
+			if e != nil {
+				return r, e
+			}
 
-		v2, e := c2.Get(ctx)
-		if e != nil {
-			return r, e
-		}
+			v2, e := c2.Get(ctx)
+			if e != nil {
+				return r, e
+			}
+			return factory(ctx, v1, v2)
+		} else {
+			v1, e := c1.getOrigin(ctx)
+			if e != nil {
+				return r, e
+			}
 
-		return factory(ctx, v1, v2)
+			v2, e := c2.getOrigin(ctx)
+			if e != nil {
+				return r, e
+			}
+			return factory(ctx, v1, v2)
+		}
 	}
 
 	return Create(wf, configs...)
@@ -117,23 +157,42 @@ func Derive3[V1 any, V2 any, V3 any, C1 Get[V1], C2 Get[V2], C3 Get[V3], R any, 
 	c1 C1, c2 C2, c3 C3,
 	configs ...ConfigFn,
 ) RC {
+	cf := buildConfig(configs...)
 	wf := func(ctx context.Context) (r R, e error) {
-		v1, e := c1.Get(ctx)
-		if e != nil {
-			return r, e
+		if cf.mode == Singleton {
+			v1, e := c1.Get(ctx)
+			if e != nil {
+				return r, e
+			}
+
+			v2, e := c2.Get(ctx)
+			if e != nil {
+				return r, e
+			}
+
+			v3, e := c3.Get(ctx)
+			if e != nil {
+				return r, e
+			}
+			return factory(ctx, v1, v2, v3)
+		} else {
+			v1, e := c1.getOrigin(ctx)
+			if e != nil {
+				return r, e
+			}
+
+			v2, e := c2.getOrigin(ctx)
+			if e != nil {
+				return r, e
+			}
+
+			v3, e := c3.getOrigin(ctx)
+			if e != nil {
+				return r, e
+			}
+			return factory(ctx, v1, v2, v3)
 		}
 
-		v2, e := c2.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
-		v3, e := c3.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
-		return factory(ctx, v1, v2, v3)
 	}
 
 	return Create(wf, configs...)

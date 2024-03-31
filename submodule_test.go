@@ -3,6 +3,7 @@ package submodule
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -66,7 +67,7 @@ func TestSubmodule(t *testing.T) {
 		derived.Get(context.TODO())
 
 		require.Equal(t, derivedCount, 3)
-		require.Equal(t, count, 1)
+		require.Equal(t, count, 3)
 	})
 
 	t.Run("Derive can also be singleton", func(t *testing.T) {
@@ -244,6 +245,25 @@ func TestDeriveSingleton(t *testing.T) {
 	require.NoError(t, err)
 
 	require.True(t, result1 == result2) // pointer comparison
+}
+
+func TestDerive_Prototype(t *testing.T) {
+	t.Setenv("ENV", "dev")
+	config := Create(func(ctx context.Context) (string, error) {
+		return "myconfig" + os.Getenv("ENV"), nil
+	})
+	derived := Derive(func(ctx context.Context, d string) (string, error) {
+		return d + "derived", nil
+	}, config, SetPrototype)
+
+	result1, err := derived.Get(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "myconfigdevderived", result1)
+
+	t.Setenv("ENV", "prod")
+	result2, err := derived.Get(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, "myconfigprodderived", result2)
 }
 
 func TestPrestage(t *testing.T) {
