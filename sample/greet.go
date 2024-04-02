@@ -5,18 +5,27 @@ import (
 	"submodule"
 )
 
-type GreetService struct {
+type hiStruct struct {
 	Url string
 }
 
-func (m GreetService) Hi() {
-	fmt.Printf("%s Hi \n", m.Url)
+type HiService interface {
+	Hi() string
+	Bye()
 }
 
-func (m GreetService) Bye() {
-	fmt.Printf("%s Bye \n", m.Url)
+func (m hiStruct) Hi() string {
+	fmt.Printf("%s > Hi \n", m.Url)
+	return m.Url
 }
 
-var GetGreetService = submodule.Derive(func(p struct{ Config Config }) (GreetService, error) {
-	return GreetService{Url: p.Config.Host}, nil
+func (m hiStruct) Bye() {
+	fmt.Printf("%s > Bye \n", m.Url)
+}
+
+var hiProvider = submodule.Derive(func(p struct {
+	Config Config
+	Env    Env
+}) (HiService, error) {
+	return hiStruct{Url: p.Config.Host}, nil
 })

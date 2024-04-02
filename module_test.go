@@ -9,20 +9,34 @@ import (
 func TestModuleFunction(t *testing.T) {
 	t.Cleanup(func() {
 		fmt.Println("Cleaning up")
-		Show()
-		Clean()
-		Show()
+	})
+
+	t.Run("test resolve by type", func(t *testing.T) {
+		type Config struct{}
+
+		stringProvider := Provide(func() (Config, error) {
+			return Config{}, nil
+		})
+
+		v, e := ResolveByType(Config{}, stringProvider)
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
+		if reflect.TypeOf(v) != reflect.TypeOf(Config{}) {
+			t.FailNow()
+		}
 	})
 
 	t.Run("test resolve", func(t *testing.T) {
 
-		Provide(func() (string, error) {
+		stringProvider := Provide(func() (string, error) {
 			return "test", nil
 		})
 
 		x := reflect.TypeOf("test")
 
-		v, e := Resolve(x)
+		v, e := resolve(x, stringProvider)
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -48,7 +62,7 @@ func TestModuleFunction(t *testing.T) {
 
 		x := reflect.TypeOf(Test{})
 
-		v, e := ResolveByFields(x)
+		v, e := resolveByFields(x)
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -83,7 +97,7 @@ func TestModuleFunction(t *testing.T) {
 
 		x := reflect.TypeOf(Test{})
 
-		v, e := ResolveByFields(x)
+		v, e := resolveByFields(x)
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -99,7 +113,7 @@ func TestModuleFunction(t *testing.T) {
 		}
 	})
 
-	t.Run("execute", func(t *testing.T) {
+	t.Run("test execute", func(t *testing.T) {
 		Provide(func() (int, error) {
 			return 45, nil
 		})
@@ -118,11 +132,11 @@ func TestModuleFunction(t *testing.T) {
 	})
 
 	t.Run("direct call", func(t *testing.T) {
-		makeInt := Provide(func() (int, error) {
+		intProvider := Provide(func() (int, error) {
 			return 45, nil
 		})
 
-		v1, e1 := makeInt()
+		v1, e1 := intProvider.Resolve()
 		if e1 != nil {
 			t.Fatalf("Execute failed %+v", e1)
 		}
@@ -131,11 +145,11 @@ func TestModuleFunction(t *testing.T) {
 			t.FailNow()
 		}
 
-		makeStringFromInt := Derive(func(p struct{ X int }) (string, error) {
+		stringProvider := Derive(func(p struct{ X int }) (string, error) {
 			return fmt.Sprintf("%d", p.X), nil
 		})
 
-		v2, e2 := makeStringFromInt()
+		v2, e2 := stringProvider.Resolve()
 		if e2 != nil {
 			t.Fatalf("Execute failed %+v", e2)
 		}
@@ -148,11 +162,11 @@ func TestModuleFunction(t *testing.T) {
 
 	t.Run("test error", func(t *testing.T) {
 		// Derive should be error as well
-		makeStringFromInt := Derive(func(p struct{ X int }) (string, error) {
+		stringProvider := Derive(func(p struct{ X int }) (string, error) {
 			return "", nil
 		})
 
-		v, e2 := makeStringFromInt()
+		v, e2 := stringProvider.Resolve()
 		if e2 != nil {
 			t.Fatalf("Must have error %s, but got %+v", e2, v)
 
@@ -161,6 +175,52 @@ func TestModuleFunction(t *testing.T) {
 			}
 		}
 
+	})
+
+	t.Run("test overvalue", func(t *testing.T) {
+		Provide(func() (int, error) {
+			return 60, nil
+		})
+
+		explicitProvider := Provide(func() (int, error) {
+			return 45, nil
+		})
+
+		value := Derive(func(p struct{ P int }) (int, error) {
+			return p.P, nil
+		}, explicitProvider)
+
+		v, e := value.Resolve()
+
+		if e != nil {
+			t.Fatalf("Must have error %v", e)
+		}
+
+		if v != 45 {
+			t.Fatalf("Must have error")
+		}
+	})
+
+	t.Run("test factory function", func(t *testing.T) {
+		Provide(func() (int, error) {
+			return 60, nil
+		})
+
+		fn := Factory(func(p struct{ I int }) func(int) (int, error) {
+			return func(i int) (int, error) {
+				return i + p.I, nil
+			}
+		})
+
+		r, x := fn(2)
+
+		if x != nil {
+			t.Fatalf("Must have error %v", x)
+		}
+
+		if r != 62 {
+			t.FailNow()
+		}
 	})
 
 }
