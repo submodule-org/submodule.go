@@ -1,7 +1,7 @@
 package main
 
 import (
-	"submodule"
+	"github.com/submodule-org/submodule.go"
 )
 
 func main() {

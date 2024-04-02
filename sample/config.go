@@ -1,6 +1,6 @@
 package main
 
-import "submodule"
+import "github.com/submodule-org/submodule.go"
 
 type Config struct {
 	Host string

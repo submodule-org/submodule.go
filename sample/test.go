@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"submodule"
+
+	"github.com/submodule-org/submodule.go"
 )
 
 type byeStruct struct {

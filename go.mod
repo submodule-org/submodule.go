@@ -1,4 +1,4 @@
-module submodule
+module github.com/submodule-org/submodule.go
 
 go 1.21
 

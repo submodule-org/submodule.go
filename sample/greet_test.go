@@ -1,8 +1,9 @@
 package main
 
 import (
-	"submodule"
 	"testing"
+
+	"github.com/submodule-org/submodule.go"
 )
 
 func TestGreet(t *testing.T) {
