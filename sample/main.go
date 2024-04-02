@@ -1,8 +1,11 @@
 package main
 
-import "submodule"
+import (
+	"submodule"
+)
 
 func main() {
+	// use directly
 	gs, e := hiProvider.Resolve()
 	if e != nil {
 		panic(e)
@@ -10,11 +13,18 @@ func main() {
 
 	gs.Hi()
 
+	// wrap into a function and use
 	sayBye := submodule.Factory(func(p struct{ ByeService }) func() string {
 		return func() string {
 			return p.ByeService.Hi()
 		}
 	})
-
 	sayBye()
+
+	// wrap into an execution and use
+	submodule.Execute(func(p struct{ ByeService }) (any, error) {
+		p.ByeService.Bye()
+		return nil, nil
+	})
+
 }

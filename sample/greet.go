@@ -24,8 +24,8 @@ func (m hiStruct) Bye() {
 }
 
 var hiProvider = submodule.Derive(func(p struct {
-	Config Config
-	Env    Env
+	Config
+	Env
 }) (HiService, error) {
 	return hiStruct{Url: p.Config.Host}, nil
 })

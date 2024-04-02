@@ -24,9 +24,9 @@ func (m byeStruct) Bye() {
 }
 
 var _ = submodule.Derive(func(p struct {
-	Config    Config
-	Env       Env
-	HiService HiService
+	Config
+	Env
+	HiService
 }) (ByeService, error) {
 	p.HiService.Bye()
 	return byeStruct{Prefix: p.Config.Host}, nil
