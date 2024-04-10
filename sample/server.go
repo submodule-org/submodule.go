@@ -9,7 +9,7 @@ import (
 type server struct {
 	Config       Config
 	Logger       Logger
-	EmptyHandler Handler
+	EmptyHandler Handler // `name:"empty"`
 	// Handlers     []Handler `group:"handler"` // will resolve tag here `group:"handler"`
 }
 
