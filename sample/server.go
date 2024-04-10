@@ -7,22 +7,16 @@ import (
 )
 
 type server struct {
-	config Config
-	logger Logger
+	submodule.In
+	Config Config
+	Logger Logger
 }
 type Server interface {
 	Start()
 }
 
 func (s *server) Start() {
-	s.logger.Log(fmt.Sprintf("Starting server on %s:%d\n", s.config.Host, s.config.Port))
+	s.Logger.Log(fmt.Sprintf("Starting server on %s:%d\n", s.Config.Host, s.Config.Port))
 }
 
-func setUpServer(config Config, logger Logger) Server {
-	return &server{
-		config,
-		logger,
-	}
-}
-
-var ServerMod = submodule.Make[Server](setUpServer, ConfigMod, LoggerMod)
+var ServerMod = submodule.Craft[Server](&server{}, ConfigMod, LoggerMod)

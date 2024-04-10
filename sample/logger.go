@@ -7,7 +7,7 @@ import (
 )
 
 type logger struct {
-	config Config
+	Config Config
 }
 
 type Logger interface {
@@ -15,13 +15,7 @@ type Logger interface {
 }
 
 func (l *logger) Log(msg string) {
-	fmt.Printf("%s: %s\n", l.config.LogLevel, msg)
+	fmt.Printf("%s: %s\n", l.Config.LogLevel, msg)
 }
 
-func createLogger(config Config) Logger {
-	return &logger{
-		config,
-	}
-}
-
-var LoggerMod = submodule.Make[Logger](createLogger, ConfigMod)
+var LoggerMod = submodule.Craft[Logger](&logger{}, ConfigMod)
