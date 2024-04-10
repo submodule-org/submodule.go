@@ -206,8 +206,8 @@ func Make[T any](fn any, dependencies ...Gettable) Submodule[T] {
 func Craft[T any](t T, dependencies ...Gettable) Submodule[T] {
 	tt := reflect.TypeOf(t)
 
-	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer {
-		panic(fmt.Sprintf("only struct or struct pointer: %v", tt))
+	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer && tt.Kind() != reflect.Func {
+		panic(fmt.Sprintf("only struct or struct pointer or func: %v", tt.String()))
 	}
 
 	return construct[T](func() T {

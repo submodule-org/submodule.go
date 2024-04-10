@@ -7,16 +7,28 @@ import (
 )
 
 type server struct {
-	Config Config
-	Logger Logger
+	Config       Config
+	Logger       Logger
+	EmptyHandler Handler // will resolve tag here
 }
 
 type Server interface {
 	Start()
 }
 
-func (s *server) Start() {
-	s.Logger.Log(fmt.Sprintf("Starting server on %s:%d\n", s.Config.Host, s.Config.Port))
+type Handler interface {
+	Handle()
 }
 
-var ServerMod = submodule.Craft[Server](&server{}, ConfigMod, LoggerMod)
+func (s *server) Start() {
+	s.Logger.Log(fmt.Sprintf("Starting server on %s:%d\n", s.Config.Host, s.Config.Port))
+
+	s.EmptyHandler.Handle()
+}
+
+var ServerMod = submodule.Craft[Server](
+	&server{},
+	ConfigMod,
+	LoggerMod,
+	EmptyHanlderMod,
+)
