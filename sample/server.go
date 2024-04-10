@@ -9,7 +9,8 @@ import (
 type server struct {
 	Config       Config
 	Logger       Logger
-	EmptyHandler Handler // will resolve tag here
+	EmptyHandler Handler
+	// Handlers     []Handler `group:"handler"` // will resolve tag here `group:"handler"`
 }
 
 type Server interface {
