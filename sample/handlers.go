@@ -10,6 +10,7 @@ type emptyHandler struct {
 func (h *emptyHandler) Handle() {
 	h.Db.Query()
 	h.Logger.Log("Empty handler")
+
 }
 
 var EmptyHanlderMod = submodule.Craft[Handler](

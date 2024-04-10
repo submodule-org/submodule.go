@@ -9,4 +9,9 @@ func main() {
 	}
 
 	s.Start()
+
+	fn, _ := fn.Resolve()
+	x := fn("ehllo")
+
+	fmt.Printf("x: %s\n", x)
 }
