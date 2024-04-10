@@ -1,13 +1,21 @@
 package main
 
-import "github.com/submodule-org/submodule.go"
+import (
+	"github.com/submodule-org/submodule.go"
+)
 
 type Config struct {
-	Host string
+	Host     string
+	Port     int
+	LogLevel string
 }
 
-var _ = submodule.Provide(func() (Config, error) {
+func collectConfig() Config {
 	return Config{
-		Host: "localhost",
-	}, nil
-})
+		Host:     "localhost",
+		Port:     8080,
+		LogLevel: "debug",
+	}
+}
+
+var ConfigMod = submodule.Provide(collectConfig)

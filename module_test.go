@@ -2,225 +2,168 @@ package submodule
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 )
 
+func ms() Submodule[string] {
+	return Make[string](func() string {
+		return "hello"
+	})
+}
+
 func TestModuleFunction(t *testing.T) {
-	t.Cleanup(func() {
-		fmt.Println("Cleaning up")
-	})
 
-	t.Run("test resolve by type", func(t *testing.T) {
-		type Config struct{}
-
-		stringProvider := Provide(func() (Config, error) {
-			return Config{}, nil
-		})
-
-		v, e := ResolveByType(Config{}, stringProvider)
+	t.Run("test module function", func(t *testing.T) {
+		s, e := ms().Resolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
 
-		if reflect.TypeOf(v) != reflect.TypeOf(Config{}) {
-			t.FailNow()
-		}
-	})
-
-	t.Run("test resolve", func(t *testing.T) {
-
-		stringProvider := Provide(func() (string, error) {
-			return "test", nil
-		})
-
-		x := reflect.TypeOf("test")
-
-		v, e := resolve(x, stringProvider)
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		if v != "test" {
-			t.Fatal("Resolve failed")
-		}
-	})
-
-	t.Run("Resolve by fields", func(t *testing.T) {
-		Provide(func() (string, error) {
-			return "test", nil
-		})
-
-		Provide(func() (int, error) {
-			return 3, nil
-		})
-
-		type Test struct {
-			A string
-			B int
-		}
-
-		x := reflect.TypeOf(Test{})
-
-		v, e := resolveByFields(x)
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		fmt.Printf("Resolved %+v\n", v)
-
-		if v.(Test).A != "test" {
-			t.Fatal("Resolve failed")
-		}
-
-		if v.(Test).B != 3 {
-			t.Fatal("Resolve failed")
-		}
-	})
-
-	t.Run("derive", func(t *testing.T) {
-		Provide(func() (string, error) {
-			return "test", nil
-		})
-
-		Derive(func(p struct{ A string }) (int, error) {
-			if p.A == "test" {
-				return 3, nil
-			}
-			return 0, fmt.Errorf("Failed")
-		})
-
-		type Test struct {
-			A string
-			B int
-		}
-
-		x := reflect.TypeOf(Test{})
-
-		v, e := resolveByFields(x)
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		fmt.Printf("Resolved %+v\n", v)
-
-		if v.(Test).A != "test" {
-			t.Fatal("Resolve failed")
-		}
-
-		if v.(Test).B != 3 {
-			t.Fatal("Resolve failed")
-		}
-	})
-
-	t.Run("test execute", func(t *testing.T) {
-		Provide(func() (int, error) {
-			return 45, nil
-		})
-
-		v, error := Execute(func(p struct{ X int }) (int, error) {
-			return p.X, nil
-		})
-
-		if error != nil {
-			t.Fatalf("Execute failed %+v", error)
-		}
-
-		if v != 45 {
-			t.FailNow()
-		}
-	})
-
-	t.Run("direct call", func(t *testing.T) {
-		intProvider := Provide(func() (int, error) {
-			return 45, nil
-		})
-
-		v1, e1 := intProvider.Resolve()
-		if e1 != nil {
-			t.Fatalf("Execute failed %+v", e1)
-		}
-
-		if v1 != 45 {
-			t.FailNow()
-		}
-
-		stringProvider := Derive(func(p struct{ X int }) (string, error) {
-			return fmt.Sprintf("%d", p.X), nil
-		})
-
-		v2, e2 := stringProvider.Resolve()
-		if e2 != nil {
-			t.Fatalf("Execute failed %+v", e2)
-		}
-
-		if v2 != "45" {
+		if s != "hello" {
 			t.FailNow()
 		}
 
 	})
 
-	t.Run("test error", func(t *testing.T) {
-		// Derive should be error as well
-		stringProvider := Derive(func(p struct{ X int }) (string, error) {
-			return "", nil
-		})
-
-		v, e2 := stringProvider.Resolve()
-		if e2 != nil {
-			t.Fatalf("Must have error %s, but got %+v", e2, v)
-
-			if e2.Error() != "failed to resolve int" {
-				t.Fatalf("Error didn't carry over %s", v)
-			}
+	t.Run("test dependency", func(t *testing.T) {
+		type A struct {
+			Name string
+		}
+		type B struct {
+			Prefix string
 		}
 
-	})
-
-	t.Run("test overvalue", func(t *testing.T) {
-		Provide(func() (int, error) {
-			return 60, nil
-		})
-
-		explicitProvider := Provide(func() (int, error) {
-			return 45, nil
-		})
-
-		value := Derive(func(p struct{ P int }) (int, error) {
-			return p.P, nil
-		}, explicitProvider)
-
-		v, e := value.Resolve()
-
-		if e != nil {
-			t.Fatalf("Must have error %v", e)
-		}
-
-		if v != 45 {
-			t.Fatalf("Must have error")
-		}
-	})
-
-	t.Run("test factory function", func(t *testing.T) {
-		Provide(func() (int, error) {
-			return 60, nil
-		})
-
-		fn := Factory(func(p struct{ I int }) func(int) (int, error) {
-			return func(i int) (int, error) {
-				return i + p.I, nil
+		a := Make[A](func() A {
+			return A{
+				Name: "hello",
 			}
 		})
 
-		r, x := fn(2)
+		b := Make[*B](func(a A) *B {
+			return &B{
+				Prefix: a.Name,
+			}
+		}, a)
 
-		if x != nil {
-			t.Fatalf("Must have error %v", x)
+		xb, e := b.Resolve()
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
 		}
 
-		if r != 62 {
+		if xb.Prefix != "hello" {
+			t.FailNow()
+		}
+
+	})
+
+	t.Run("declare wrong type", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("It's expected to be panic")
+			}
+		}()
+
+		Make[string](func() int {
+			return 0
+		})
+	})
+
+	t.Run("declare wrong interface", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("It's expected to be panic")
+			}
+		}()
+
+		Make[Bi](func() Ai {
+			return As{}
+		})
+	})
+
+	t.Run("overriding", func(t *testing.T) {
+		type A struct {
+			Name string
+		}
+
+		type B struct {
+			Prefix string
+		}
+
+		a := Make[A](func() A {
+			return A{
+				Name: "hello",
+			}
+		})
+
+		aa := Make[A](func() A {
+			return A{
+				Name: "world",
+			}
+		})
+
+		b := Make[B](func(a A) B {
+			return B{
+				Prefix: a.Name + "hello",
+			}
+		}, a)
+
+		Override(b, aa)
+
+		xb, e := b.Resolve()
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
+		if xb.Prefix != "worldhello" {
+			fmt.Printf("%+v\n", xb)
 			t.FailNow()
 		}
 	})
 
+	t.Run("singleton", func(t *testing.T) {
+		i := 0
+
+		s := Make[int](func() int {
+			i++
+			return i
+		})
+
+		_, e := s.Resolve()
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
+		ni, _ := s.Resolve()
+
+		if ni != 1 {
+			fmt.Printf("%+v\n", ni)
+			t.FailNow()
+		}
+	})
+
+	t.Run("expose as interface", func(t *testing.T) {
+		s := Make[As](func() Ai {
+			return As{}
+		})
+
+		xs, e := s.Resolve()
+		if e != nil {
+			t.FailNow()
+		}
+
+		xs.Hello()
+	})
+}
+
+type As struct{}
+type Ai interface {
+	Hello()
+}
+
+type Bi interface {
+	Goodbye()
+}
+
+func (a As) Hello() {
+	fmt.Println("hello")
 }
