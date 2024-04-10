@@ -7,10 +7,10 @@ import (
 )
 
 type server struct {
-	submodule.In
 	Config Config
 	Logger Logger
 }
+
 type Server interface {
 	Start()
 }
