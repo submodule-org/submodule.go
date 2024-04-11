@@ -6,11 +6,13 @@ import (
 	"github.com/submodule-org/submodule.go"
 )
 
-var fn = submodule.Construct(func(p struct {
-	submodule.In
-	Config
-}) func(string) string {
-	return func(name string) string {
-		return fmt.Sprintf("Hello, %s!", p.Config.Host)
-	}
-}, ConfigMod)
+type HelloFn = func(string) string
+
+var fn = submodule.Make[HelloFn](
+	func(config Config) HelloFn {
+		return func(name string) string {
+			return fmt.Sprintf("Hello, %s!", config.Host)
+		}
+	},
+	ConfigMod,
+)

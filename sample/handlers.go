@@ -15,12 +15,7 @@ func (h *emptyHandler) Handle() {
 
 var EmptyHanlderMod = submodule.Craft[Handler](
 	&emptyHandler{},
-	LoggerMod,
-	DbMod,
-)
-
-var ZeroHandler = submodule.Craft[Handler](
-	&emptyHandler{},
+	// submodule.Tag('group="handler" name="empty"'),
 	LoggerMod,
 	DbMod,
 )
