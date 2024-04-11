@@ -153,6 +153,36 @@ func TestModuleFunction(t *testing.T) {
 
 		xs.Hello()
 	})
+
+	t.Run("group module", func(t *testing.T) {
+		type A struct {
+			Name string
+		}
+
+		a := Make[A](func() A {
+			return A{
+				Name: "hello",
+			}
+		})
+
+		b := Make[A](func() A {
+			return A{
+				Name: "world",
+			}
+		})
+
+		g := Group(a, b)
+		xg, e := g.Resolve()
+
+		if e != nil {
+			t.FailNow()
+		}
+
+		if xg[0].Name != "hello" || xg[1].Name != "world" {
+			fmt.Printf("%+v\n", xg)
+			t.FailNow()
+		}
+	})
 }
 
 type As struct{}

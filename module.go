@@ -221,6 +221,22 @@ func Craft[T any](t T, dependencies ...Gettable) Submodule[T] {
 	}, dependencies...)
 }
 
+func Group[T any](s ...Submodule[T]) Submodule[[]T] {
+	return construct[[]T](func() []T {
+		var v []T
+		for _, submodule := range s {
+			t, e := submodule.Get()
+			if e != nil {
+				panic(e)
+			}
+
+			v = append(v, t.(T))
+		}
+
+		return v
+	})
+}
+
 func Override[T any](s Submodule[T], dependencies ...Gettable) {
 	sm := s.(*submodule[T])
 	var nds []Gettable
