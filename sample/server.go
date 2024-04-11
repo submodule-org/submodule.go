@@ -7,10 +7,9 @@ import (
 )
 
 type server struct {
-	Config       Config
-	Logger       Logger
-	EmptyHandler Handler // `name:"empty"`
-	// Handlers     []Handler `group:"handler"` // will resolve tag here `group:"handler"`
+	Config   Config
+	Logger   Logger
+	Handlers []Handler `group:"true"` // will resolve tag here `group:"handler"`
 }
 
 type Server interface {
@@ -24,7 +23,6 @@ type Handler interface {
 func (s *server) Start() {
 	s.Logger.Log(fmt.Sprintf("Starting server on %s:%d\n", s.Config.Host, s.Config.Port))
 
-	s.EmptyHandler.Handle()
 }
 
 var ServerMod = submodule.Craft[Server](
@@ -32,4 +30,5 @@ var ServerMod = submodule.Craft[Server](
 	ConfigMod,
 	LoggerMod,
 	EmptyHanlderMod,
+	ZeroHandler,
 )
