@@ -16,13 +16,13 @@ type submodule[T any] struct {
 	value        T
 	e            error
 	input        any
-	provideType  string
+	provideType  reflect.Type
 	dependencies []Gettable
 }
 
 type Gettable interface {
 	Get() (any, error)
-	CanResolve(string) bool
+	CanResolve(reflect.Type) bool
 }
 
 type Replacable interface {
@@ -88,7 +88,7 @@ func resolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Gettable) (
 
 func resolveType(t reflect.Type, dependencies []Gettable) (v reflect.Value, e error) {
 	for _, d := range dependencies {
-		if d.CanResolve(t.Name()) {
+		if d.CanResolve(t) {
 			vv, err := d.Get()
 			if err != nil {
 				return
@@ -181,8 +181,8 @@ func (s *submodule[T]) Get() (any, error) {
 	return s.SafeResolve()
 }
 
-func (s *submodule[T]) CanResolve(key string) bool {
-	return s.provideType == key
+func (s *submodule[T]) CanResolve(key reflect.Type) bool {
+	return s.provideType.AssignableTo(key)
 }
 
 func construct[T any](
@@ -214,7 +214,7 @@ func construct[T any](
 
 	return &submodule[T]{
 		input:        input,
-		provideType:  provideType.Name(),
+		provideType:  provideType,
 		dependencies: dependencies,
 		initiated:    false,
 	}

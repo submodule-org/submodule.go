@@ -241,6 +241,35 @@ func TestModuleFunction(t *testing.T) {
 			t.FailNow()
 		}
 	})
+
+	t.Run("matching interface", func(t *testing.T) {
+		a := Make[As](func() As {
+			return As{}
+		})
+
+		pa := Make[*As](func() *As {
+			return &As{}
+		})
+
+		x := Make[AI](func(as AI) AI {
+			return as
+		}, a)
+
+		_, e := x.SafeResolve()
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
+		xb := Make[BI](func(as BI) BI {
+			return as
+		}, pa)
+
+		_, e = xb.SafeResolve()
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
+	})
 }
 
 type As struct{}
