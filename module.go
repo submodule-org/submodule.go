@@ -31,7 +31,8 @@ type Replacable interface {
 
 type Submodule[T any] interface {
 	Gettable
-	Resolve() (T, error)
+	SafeResolve() (T, error)
+	Resolve() T
 }
 
 func isInEmbed(t reflect.Type) bool {
@@ -133,7 +134,7 @@ func resolveTypes(types []reflect.Type, dependencies []Gettable) ([]reflect.Valu
 	return args, nil
 }
 
-func (s *submodule[T]) Resolve() (t T, e error) {
+func (s *submodule[T]) SafeResolve() (t T, e error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -166,8 +167,18 @@ func (s *submodule[T]) Resolve() (t T, e error) {
 	return s.value, s.e
 }
 
+func (s *submodule[T]) Resolve() T {
+	r, e := s.SafeResolve()
+
+	if e != nil {
+		panic(e)
+	}
+
+	return r
+}
+
 func (s *submodule[T]) Get() (any, error) {
-	return s.Resolve()
+	return s.SafeResolve()
 }
 
 func (s *submodule[T]) CanResolve(key string) bool {

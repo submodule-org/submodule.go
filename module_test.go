@@ -14,7 +14,7 @@ func ms() Submodule[string] {
 func TestModuleFunction(t *testing.T) {
 
 	t.Run("test module function", func(t *testing.T) {
-		s, e := ms().Resolve()
+		s, e := ms().SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -45,7 +45,7 @@ func TestModuleFunction(t *testing.T) {
 			}
 		}, a)
 
-		xb, e := b.Resolve()
+		xb, e := b.SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -109,7 +109,7 @@ func TestModuleFunction(t *testing.T) {
 
 		Override(b, aa)
 
-		xb, e := b.Resolve()
+		xb, e := b.SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -128,12 +128,12 @@ func TestModuleFunction(t *testing.T) {
 			return i
 		})
 
-		_, e := s.Resolve()
+		_, e := s.SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
 
-		ni, _ := s.Resolve()
+		ni, _ := s.SafeResolve()
 
 		if ni != 1 {
 			fmt.Printf("%+v\n", ni)
@@ -146,7 +146,7 @@ func TestModuleFunction(t *testing.T) {
 			return As{}
 		})
 
-		xs, e := s.Resolve()
+		xs, e := s.SafeResolve()
 		if e != nil {
 			t.FailNow()
 		}
@@ -159,7 +159,7 @@ func TestModuleFunction(t *testing.T) {
 		a := As{}
 
 		cai := Craft[AI](a)
-		rcai, e := cai.Resolve()
+		rcai, e := cai.SafeResolve()
 
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
@@ -168,7 +168,7 @@ func TestModuleFunction(t *testing.T) {
 
 		cbi := Craft[BI](&a)
 
-		rcbi, e := cbi.Resolve()
+		rcbi, e := cbi.SafeResolve()
 
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
@@ -202,7 +202,7 @@ func TestModuleFunction(t *testing.T) {
 			return p.A.Name
 		}, ma, mb)
 
-		s, e := a.Resolve()
+		s, e := a.SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
@@ -230,7 +230,7 @@ func TestModuleFunction(t *testing.T) {
 		})
 
 		g := Group(a, b)
-		xg, e := g.Resolve()
+		xg, e := g.SafeResolve()
 
 		if e != nil {
 			t.FailNow()
