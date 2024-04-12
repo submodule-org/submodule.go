@@ -255,19 +255,23 @@ func TestModuleFunction(t *testing.T) {
 			return as
 		}, a)
 
-		_, e := x.SafeResolve()
+		xa, e := x.SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
 
-		xb := Make[BI](func(as BI) BI {
+		xa.Hello()
+
+		b := Make[BI](func(as BI) BI {
 			return as
 		}, pa)
 
-		_, e = xb.SafeResolve()
+		xb, e := b.SafeResolve()
 		if e != nil {
 			t.Fatalf("Resolve failed %+v", e)
 		}
+
+		xb.Goodbye()
 
 	})
 }
