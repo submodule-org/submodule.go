@@ -11,11 +11,11 @@ type logger struct {
 }
 
 type Logger interface {
-	Log(msg string)
+	Log(msg string) string
 }
 
-func (l *logger) Log(msg string) {
-	fmt.Printf("%s: %s\n", l.Config.LogLevel, msg)
+func (l *logger) Log(msg string) string {
+	return fmt.Sprintf("%s: %s\n", l.Config.LogLevel, msg)
 }
 
 var LoggerMod = submodule.Craft[Logger](&logger{}, ConfigMod)
