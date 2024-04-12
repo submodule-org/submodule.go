@@ -48,36 +48,41 @@ func isInEmbed(t reflect.Type) bool {
 	return false
 }
 
-func resolveEmbedded(st any, dependencies []Gettable) (v any, e error) {
-	var t reflect.Type
-	var sv reflect.Value
+func resolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Gettable) (reflect.Value, error) {
+	var pt reflect.Type
+	var pv reflect.Value
 
-	if reflect.TypeOf(st).Kind() == reflect.Pointer {
-		t = reflect.TypeOf(st).Elem()
-		sv = reflect.ValueOf(st).Elem()
+	if t.Kind() == reflect.Pointer {
+		pv = reflect.Indirect(v)
+		pt = t.Elem()
 	} else {
-		t = reflect.TypeOf(st)
-		sv = reflect.ValueOf(st)
+		pv = reflect.Indirect(v)
+		pt = t
 	}
 
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
+	for i := 0; i < pt.NumField(); i++ {
+		f := pt.Field(i)
 		if f.Type == inType {
 			continue
 		}
 
 		if !f.IsExported() {
-			return v, fmt.Errorf("unable to resolve unexported field: %s", f.Name)
+			return pv, fmt.Errorf("unable to resolve unexported field: %s", f.Name)
 		}
 
 		value, err := resolveType(f.Type, dependencies)
 		if err != nil {
-			return v, err
+			return pv, err
 		}
 
-		sv.Field(i).Set(value)
+		pv.Field(i).Set(value)
 	}
-	return st, nil
+
+	if t.Kind() == reflect.Pointer {
+		return pv.Addr(), nil
+	}
+
+	return pv, nil
 }
 
 func resolveType(t reflect.Type, dependencies []Gettable) (v reflect.Value, e error) {
@@ -99,13 +104,21 @@ func resolveTypes(types []reflect.Type, dependencies []Gettable) ([]reflect.Valu
 
 	args := make([]reflect.Value, len(types))
 	for i := 0; i < len(types); i++ {
+		t := types[i]
 
-		if isInEmbed(types[i]) {
-			v, e := resolveEmbedded(types[i], dependencies)
+		if isInEmbed(t) {
+			var sv reflect.Value
+			if t.Kind() == reflect.Pointer {
+				sv = reflect.New(t.Elem())
+			} else {
+				sv = reflect.New(t)
+			}
+
+			v, e := resolveEmbedded(t, sv, dependencies)
 			if e != nil {
 				return nil, fmt.Errorf("unable to resolve embedded type: %s, %w", types[i].Name(), e)
 			}
-			args[i] = reflect.ValueOf(v)
+			args[i] = v
 			continue
 		}
 
@@ -167,6 +180,11 @@ func construct[T any](
 ) Submodule[T] {
 
 	inputType := reflect.TypeOf(input)
+
+	if inputType.Kind() != reflect.Func {
+		panic(fmt.Sprintf("only func(...any) is accepted, received: %v", inputType.String()))
+	}
+
 	provideType := inputType.Out(0)
 
 	if provideType.Kind() == reflect.Interface {
@@ -206,18 +224,17 @@ func Make[T any](fn any, dependencies ...Gettable) Submodule[T] {
 func Craft[T any](t T, dependencies ...Gettable) Submodule[T] {
 	tt := reflect.TypeOf(t)
 
-	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer && tt.Kind() != reflect.Func {
-		panic(fmt.Sprintf("only struct or struct pointer or func: %v", tt.String()))
+	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer {
+		panic(fmt.Sprintf("only struct or struct pointer : %v", tt.String()))
 	}
 
 	return construct[T](func() T {
-		_, e := resolveEmbedded(t, dependencies)
+		v, e := resolveEmbedded(tt, reflect.ValueOf(t), dependencies)
 		if e != nil {
-			e = fmt.Errorf("unable to resolve embedded type: %s, %w", tt.String(), e)
-			panic(e)
+			panic(fmt.Errorf("unable to resolve embedded type: %w", e))
 		}
 
-		return t
+		return v.Interface().(T)
 	}, dependencies...)
 }
 

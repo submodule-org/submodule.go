@@ -75,7 +75,7 @@ func TestModuleFunction(t *testing.T) {
 			}
 		}()
 
-		Make[Bi](func() Ai {
+		Make[BI](func() AI {
 			return As{}
 		})
 	})
@@ -142,7 +142,7 @@ func TestModuleFunction(t *testing.T) {
 	})
 
 	t.Run("expose as interface", func(t *testing.T) {
-		s := Make[As](func() Ai {
+		s := Make[As](func() AI {
 			return As{}
 		})
 
@@ -152,6 +152,64 @@ func TestModuleFunction(t *testing.T) {
 		}
 
 		xs.Hello()
+	})
+
+	t.Run("test craft", func(t *testing.T) {
+
+		a := As{}
+
+		cai := Craft[AI](a)
+		rcai, e := cai.Resolve()
+
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+		rcai.Hello()
+
+		cbi := Craft[BI](&a)
+
+		rcbi, e := cbi.Resolve()
+
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+		rcbi.Goodbye()
+	})
+
+	t.Run("test In resolve", func(t *testing.T) {
+
+		type A struct {
+			Name string
+		}
+
+		ma := Provide(func() A {
+			return A{
+				Name: "hello",
+			}
+		})
+
+		mb := Provide(func() *A {
+			return &A{
+				Name: "world",
+			}
+		})
+
+		a := Make[string](func(p struct {
+			In
+			A  A
+			Ap *A
+		}) string {
+			return p.A.Name
+		}, ma, mb)
+
+		s, e := a.Resolve()
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
+		if s != "hello" {
+			t.FailNow()
+		}
 	})
 
 	t.Run("group module", func(t *testing.T) {
@@ -186,14 +244,18 @@ func TestModuleFunction(t *testing.T) {
 }
 
 type As struct{}
-type Ai interface {
+type AI interface {
 	Hello()
 }
 
-type Bi interface {
+type BI interface {
 	Goodbye()
 }
 
 func (a As) Hello() {
 	fmt.Println("hello")
+}
+
+func (a *As) Goodbye() {
+	fmt.Println("goodbye")
 }
