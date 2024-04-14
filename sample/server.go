@@ -30,5 +30,5 @@ var ServerMod = submodule.Craft[Server](
 	&server{},
 	ConfigMod,
 	LoggerMod,
-	EmptyHanlderMod,
+	EmptyHandlerMod,
 )

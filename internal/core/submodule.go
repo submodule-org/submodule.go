@@ -39,7 +39,7 @@ type Submodule[T any] interface {
 	Reset()
 }
 
-func IsInEmbed(t reflect.Type) bool {
+func IsInEmbedded(t reflect.Type) bool {
 	if t.Kind() != reflect.Struct {
 		return false
 	}
@@ -122,7 +122,7 @@ func (s *S[T]) SafeResolve() (t T, e error) {
 		for i := 0; i < inputType.NumIn(); i++ {
 			argsTypes[i] = inputType.In(i)
 
-			if IsInEmbed(argsTypes[i]) {
+			if IsInEmbedded(argsTypes[i]) {
 				var sv reflect.Value
 				if argsTypes[i].Kind() == reflect.Pointer {
 					sv = reflect.New(argsTypes[i].Elem())

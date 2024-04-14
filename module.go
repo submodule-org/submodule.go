@@ -58,9 +58,9 @@ func Group[T any](s ...core.Gettable) core.Submodule[[]T] {
 func Prepend[T any](s core.Submodule[T], dependencies ...core.Gettable) core.Submodule[T] {
 	osm := s.(*core.S[T])
 
-	var udeps []core.Gettable
-	udeps = append(udeps, dependencies...)
-	udeps = append(udeps, osm.Dependencies...)
+	var updatedDependencies []core.Gettable
+	updatedDependencies = append(updatedDependencies, dependencies...)
+	updatedDependencies = append(updatedDependencies, osm.Dependencies...)
 
-	return core.Construct[T](osm.Input, udeps...)
+	return core.Construct[T](osm.Input, updatedDependencies...)
 }
