@@ -2,6 +2,7 @@ package submodule
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/submodule-org/submodule.go/internal/core"
@@ -299,6 +300,35 @@ func TestModuleFunction(t *testing.T) {
 
 		r = i3.Resolve()
 		if r != 0 {
+			t.FailNow()
+		}
+	})
+
+	t.Run("error should be treated well", func(t *testing.T) {
+		ae := ProvideWithError(func() (int, error) {
+			return 0, fmt.Errorf("error_0")
+		})
+
+		_, e := ae.SafeResolve()
+		if e == nil {
+			t.FailNow()
+		}
+
+		me := Make[int](func() (int, error) {
+			return 0, fmt.Errorf("error 2")
+		})
+
+		_, e = me.SafeResolve()
+		if e == nil {
+			t.FailNow()
+		}
+
+		ce := Make[int](func(i int) (int, error) {
+			return 0, fmt.Errorf("error 3")
+		}, ae)
+
+		_, e = ce.SafeResolve()
+		if e == nil || !strings.Contains(e.Error(), "error_0") {
 			t.FailNow()
 		}
 	})

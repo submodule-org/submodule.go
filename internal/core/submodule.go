@@ -99,7 +99,7 @@ func ResolveType(t reflect.Type, dependencies []Gettable) (v reflect.Value, e er
 		if d.CanResolve(t) {
 			vv, err := d.Get()
 			if err != nil {
-				return
+				return v, err
 			}
 
 			v = reflect.ValueOf(vv)
