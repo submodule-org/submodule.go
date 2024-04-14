@@ -15,9 +15,14 @@ func TestLogger(t *testing.T) {
 			}
 		})
 
-		submodule.Override(LoggerMod, infoConfig)
+		infoLoggerMod := submodule.Prepend(LoggerMod, infoConfig)
 
-		l := LoggerMod.Resolve()
+		l, e := infoLoggerMod.SafeResolve()
+
+		if e != nil {
+			t.Fatalf("Resolve failed %+v", e)
+		}
+
 		v := l.Log("test")
 		if !strings.HasPrefix(v, "info") {
 			t.Fatal()

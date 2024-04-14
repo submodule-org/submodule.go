@@ -11,6 +11,7 @@ type Config struct {
 }
 
 func collectConfig() Config {
+	println("resolving config")
 	return Config{
 		Host:     "localhost",
 		Port:     8080,

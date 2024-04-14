@@ -3,9 +3,11 @@ package submodule
 import (
 	"fmt"
 	"testing"
+
+	"github.com/submodule-org/submodule.go/internal/core"
 )
 
-func ms() Submodule[string] {
+func ms() core.Submodule[string] {
 	return Make[string](func() string {
 		return "hello"
 	})
@@ -107,12 +109,8 @@ func TestModuleFunction(t *testing.T) {
 			}
 		}, a)
 
-		Override(b, aa)
-
-		xb, e := b.SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
+		mb := Prepend(b, aa)
+		xb := mb.Resolve()
 
 		if xb.Prefix != "worldhello" {
 			fmt.Printf("%+v\n", xb)
@@ -195,7 +193,7 @@ func TestModuleFunction(t *testing.T) {
 		})
 
 		a := Make[string](func(p struct {
-			In
+			core.In
 			A  A
 			Ap *A
 		}) string {
@@ -229,7 +227,7 @@ func TestModuleFunction(t *testing.T) {
 			}
 		})
 
-		g := Group(a, b)
+		g := Group[A](a, b)
 		xg, e := g.SafeResolve()
 
 		if e != nil {
@@ -273,6 +271,36 @@ func TestModuleFunction(t *testing.T) {
 
 		xb.Goodbye()
 
+	})
+
+	t.Run("can use init and reset to init and reset", func(t *testing.T) {
+		i1 := Provide(func() int {
+			return 1
+		})
+
+		i2 := Make[int](func(i int) int {
+			return i + 2
+		}, i1)
+
+		i3 := Make[int](func(i int) int {
+			return i + 3
+		}, i2)
+
+		var r int
+		r = i3.Resolve()
+		if r != 6 {
+			t.FailNow()
+		}
+
+		i1.Reset()
+		i1.Init(-5)
+		i2.Reset()
+		i3.Reset()
+
+		r = i3.Resolve()
+		if r != 0 {
+			t.FailNow()
+		}
 	})
 }
 
