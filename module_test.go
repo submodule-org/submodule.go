@@ -332,6 +332,35 @@ func TestModuleFunction(t *testing.T) {
 			t.FailNow()
 		}
 	})
+
+	t.Run("test run in sandbox", func(t *testing.T) {
+		RunInSandbox(true)
+		x := Provide(func() *Counter {
+			return &Counter{
+				Count: 0,
+			}
+		})
+
+		xx := x.Resolve()
+		xx.Plus()
+		fmt.Printf("%+v\n", xx)
+
+		go func() {
+			ax := x.Resolve()
+			fmt.Printf("%+v\n", ax)
+			println(ax.Count)
+		}()
+
+		fmt.Printf("%+v\n", xx)
+	})
+}
+
+type Counter struct {
+	Count int
+}
+
+func (c *Counter) Plus() {
+	c.Count++
 }
 
 type As struct{}

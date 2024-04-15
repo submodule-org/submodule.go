@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"github.com/timandy/routine"
 )
 
 type In struct{}
@@ -14,15 +16,63 @@ type Self struct {
 var InType = reflect.TypeOf(In{})
 var SelfType = reflect.TypeOf(Self{})
 
+type Value[T any] struct {
+	mu        sync.Mutex
+	value     T
+	e         error
+	initiated bool
+}
+
+type store struct {
+	mu     sync.Mutex
+	values map[Gettable]*Value[any]
+}
+
+func (s *store) Init(g Gettable) *Value[any] {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	v, ok := s.values[g]
+	if !ok {
+		v = &Value[any]{
+			initiated: false,
+		}
+		s.values[g] = v
+	}
+
+	return v
+}
+
+var localStore = &store{
+	values: make(map[Gettable]*Value[any]),
+	mu:     sync.Mutex{},
+}
+
+var threadLocalStore = routine.NewInheritableThreadLocalWithInitial(func() *store {
+	return &store{
+		values: make(map[Gettable]*Value[any]),
+		mu:     sync.Mutex{},
+	}
+})
+
+var sandboxMod = false
+
+func RunInSandbox(s bool) {
+	sandboxMod = s
+}
+
+func getStore() *store {
+	if sandboxMod {
+		return threadLocalStore.Get()
+	}
+
+	return localStore
+}
+
 type S[T any] struct {
 	Input        any
 	ProvideType  reflect.Type
 	Dependencies []Gettable
-
-	mu        sync.Mutex
-	initiated bool
-	value     T
-	e         error
 }
 
 type Gettable interface {
@@ -110,10 +160,13 @@ func ResolveType(t reflect.Type, dependencies []Gettable) (v reflect.Value, e er
 }
 
 func (s *S[T]) SafeResolve() (t T, e error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	store := getStore()
 
-	if !s.initiated {
+	v := store.Init(s)
+	v.mu.Lock()
+	defer v.mu.Unlock()
+
+	if !v.initiated {
 		inputType := reflect.TypeOf(s.Input)
 
 		argsTypes := make([]reflect.Type, inputType.NumIn())
@@ -153,18 +206,22 @@ func (s *S[T]) SafeResolve() (t T, e error) {
 
 		result := reflect.ValueOf(s.Input).Call(args)
 		if len(result) == 1 {
-			s.value = result[0].Interface().(T)
+			v.value = result[0].Interface().(T)
 		} else {
 			if result[1] != reflect.ValueOf(nil) {
-				s.e = result[1].Interface().(error)
+				v.e = result[1].Interface().(error)
 			} else {
-				s.value = result[0].Interface().(T)
+				v.value = result[0].Interface().(T)
 			}
 		}
 
-		s.initiated = true
+		v.initiated = true
 	}
-	return s.value, s.e
+	if v.e != nil {
+		return t, v.e
+	}
+
+	return v.value.(T), v.e
 }
 
 func (s *S[T]) Resolve() T {
@@ -186,17 +243,21 @@ func (s *S[T]) CanResolve(key reflect.Type) bool {
 }
 
 func (s *S[T]) Reset() {
-	s.initiated = false
+	v := getStore().Init(s)
+	v.mu.Lock()
+	defer v.mu.Unlock()
 
+	v.initiated = false
 }
 
 func (s *S[T]) Init(t T) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	v := getStore().Init(s)
+	v.mu.Lock()
+	defer v.mu.Unlock()
 
-	s.initiated = true
-	s.value = t
-	s.e = nil
+	v.initiated = true
+	v.value = t
+	v.e = nil
 }
 
 func Construct[T any](
@@ -229,6 +290,5 @@ func Construct[T any](
 		Input:        input,
 		ProvideType:  provideType,
 		Dependencies: dependencies,
-		initiated:    false,
 	}
 }

@@ -9,6 +9,8 @@ import (
 
 type In = core.In
 
+var RunInSandbox = core.RunInSandbox
+
 func Provide[T any](fn func() T) core.Submodule[T] {
 	return core.Construct[T](fn)
 }
