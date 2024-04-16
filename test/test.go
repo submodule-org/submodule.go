@@ -1,4 +1,4 @@
-package submodule_test
+package main
 
 import (
 	"fmt"
@@ -41,7 +41,7 @@ var LoggerMod = submodule.Make[Logger](func(config Config) Logger {
 	return &logger{
 		LogLevel: config.LogLevel,
 	}
-})
+}, ConfigMod)
 
 type server struct {
 	Config Config
