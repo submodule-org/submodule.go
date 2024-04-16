@@ -55,14 +55,23 @@ var threadLocalStore = routine.NewInheritableThreadLocalWithInitial(func() *stor
 	}
 })
 
-var sandboxMod = false
+var sandboxFlag = routine.NewInheritableThreadLocalWithInitial[bool](func() bool {
+	return false
+})
 
-func RunInSandbox(s bool) {
-	sandboxMod = s
+func RunInSandbox(fn func()) {
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		sandboxFlag.Set(true)
+		fn()
+	}()
+	wg.Wait()
 }
 
 func getStore() *store {
-	if sandboxMod {
+	if sandboxFlag.Get() {
 		return threadLocalStore.Get()
 	}
 

@@ -9,7 +9,6 @@ import (
 
 func TestLogger(t *testing.T) {
 	t.Run("run in info mode should work", func(t *testing.T) {
-		submodule.RunInSandbox(true)
 
 		infoConfig := submodule.Provide(func() Config {
 			return Config{
@@ -32,26 +31,29 @@ func TestLogger(t *testing.T) {
 	})
 
 	t.Run("check run in sandbox", func(t *testing.T) {
-		submodule.RunInSandbox(true)
-		ConfigMod.Init(Config{
-			LogLevel: "info",
+		submodule.RunInSandbox(func() {
+			ConfigMod.Init(Config{
+				LogLevel: "info",
+			})
+
+			l := LoggerMod.Resolve()
+			v := l.Log("test")
+			if !strings.HasPrefix(v, "info") {
+				t.Fatal()
+			}
 		})
 
-		l := LoggerMod.Resolve()
-		v := l.Log("test")
-		if !strings.HasPrefix(v, "info") {
-			t.Fatal()
-		}
 	})
 
 	t.Run("default logger is debug", func(t *testing.T) {
-		submodule.RunInSandbox(true)
-		l := LoggerMod.Resolve()
+		submodule.RunInSandbox(func() {
+			l := LoggerMod.Resolve()
 
-		v := l.Log("test")
-		if !strings.HasPrefix(v, "debug") {
-			t.Fatal()
-		}
+			v := l.Log("test")
+			if !strings.HasPrefix(v, "debug") {
+				t.Fatal()
+			}
+		})
 	})
 
 }

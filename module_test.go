@@ -334,7 +334,6 @@ func TestModuleFunction(t *testing.T) {
 	})
 
 	t.Run("test run in sandbox", func(t *testing.T) {
-		RunInSandbox(true)
 		x := Provide(func() *Counter {
 			return &Counter{
 				Count: 0,
@@ -343,15 +342,15 @@ func TestModuleFunction(t *testing.T) {
 
 		xx := x.Resolve()
 		xx.Plus()
-		fmt.Printf("%+v\n", xx)
 
-		go func() {
-			ax := x.Resolve()
-			fmt.Printf("%+v\n", ax)
-			println(ax.Count)
-		}()
+		var ax *Counter
+		RunInSandbox(func() {
+			ax = x.Resolve()
+		})
 
-		fmt.Printf("%+v\n", xx)
+		if ax.Count != 0 && xx.Count != 1 {
+			t.Fail()
+		}
 	})
 }
 
