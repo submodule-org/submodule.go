@@ -1,8 +1,13 @@
 module github.com/submodule-org/submodule.go
 
-go 1.22
+go 1.21
 
-require github.com/stretchr/testify v1.8.4
+toolchain go1.21.5
+
+require (
+	github.com/stretchr/testify v1.9.0
+	github.com/timandy/routine v1.1.3
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

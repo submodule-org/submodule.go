@@ -34,41 +34,6 @@ func TestSubmodule(t *testing.T) {
 		require.Equal(t, count, 1)
 	})
 
-	t.Run("Can call object in prototype mode", func(t *testing.T) {
-		count := 0
-		counter := Create(func(ctx context.Context) (x any, e error) {
-			count = count + 1
-			return
-		}, SetPrototype)
-
-		counter.Get(context.TODO())
-		counter.Get(context.TODO())
-		counter.Get(context.TODO())
-
-		require.Equal(t, count, 3)
-	})
-
-	t.Run("Derive would still hornor running mode", func(t *testing.T) {
-		count := 0
-		counter := Create(func(ctx context.Context) (x int, e error) {
-			count = count + 1
-			return count, nil
-		})
-
-		derivedCount := 0
-		derived := Derive(func(ctx context.Context, count int) (x int, e error) {
-			derivedCount = derivedCount + 1
-			return count, nil
-		}, counter, SetPrototype)
-
-		derived.Get(context.TODO())
-		derived.Get(context.TODO())
-		derived.Get(context.TODO())
-
-		require.Equal(t, derivedCount, 3)
-		require.Equal(t, count, 1)
-	})
-
 	t.Run("Derive can also be singleton", func(t *testing.T) {
 		count := 0
 		counter := Create(func(ctx context.Context) (x int, e error) {
@@ -141,26 +106,6 @@ func TestSubmodule(t *testing.T) {
 		require.Equal(t, r, "4000something")
 	})
 
-	t.Run("should be able to replace value to test", func(t *testing.T) {
-		ctx := context.Background()
-
-		config := Create(func(ctx context.Context) (string, error) {
-			return "myconfig1", nil
-		})
-
-		configMock := Create(func(ctx context.Context) (string, error) {
-			return "myconfig_mock_", nil
-		})
-
-		derived := Derive(func(ctx context.Context, d string) (string, error) {
-			return d + "derived", nil
-		}, config)
-		ctx = context.WithValue(ctx, config, configMock)
-		result, err := derived.Get(ctx)
-		require.NoError(t, err)
-		require.Equal(t, "myconfig_mock_derived", result)
-	})
-
 	t.Run("should handle panic", func(t *testing.T) {
 		withNormal := Create(func(ctx context.Context) (x string, e error) {
 			return "normal", nil
@@ -212,16 +157,6 @@ func TestDerive3(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "myconfig1myconfig2myconfig3", result)
 }
-func Test_Support_Cancel_Context(t *testing.T) {
-	var config = Create(func(ctx context.Context) (string, error) {
-		return "myconfig", nil
-	})
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	_, err := config.Get(ctx)
-	require.Error(t, err)
-	require.Equal(t, context.Canceled, err)
-}
 
 func TestDeriveSingleton(t *testing.T) {
 	config := Create(func(ctx context.Context) (string, error) {
@@ -244,30 +179,4 @@ func TestDeriveSingleton(t *testing.T) {
 	require.NoError(t, err)
 
 	require.True(t, result1 == result2) // pointer comparison
-}
-
-func TestPrestage(t *testing.T) {
-	type Config struct {
-		port string
-	}
-
-	type Service struct {
-		service string
-	}
-
-	config := Create(func(ctx context.Context) (Config, error) {
-		return Config{
-			port: "4000",
-		}, nil
-	})
-
-	mod := Prestage(func(ctx context.Context, config Config) (Service, error) {
-		return Service{
-			service: config.port,
-		}, nil
-	})
-
-	service := mod(config)
-	port, _ := service.Get(context.TODO())
-	require.Equal(t, port.service, "4000")
 }

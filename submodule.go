@@ -2,34 +2,12 @@ package submodule
 
 import (
 	"context"
-	"sync"
+
+	"github.com/submodule-org/submodule.go/internal/core"
 )
 
 // ConfigFn is a function that takes a pointer to a Submodule instance and returns a pointer to a Submodule instance.
-type Get[V any] interface {
-	Get(context.Context) (V, error)
-}
-
-// Package submodule provides a set of utilities for managing submodules in a larger project.
-// It includes functions for creating, deriving, and executing submodules, as well as a Get interface for retrieving them.
-// The package uses context for managing dependencies and error handling.
-// It also uses sync for ensuring thread safety.
-type Submodule[V any] struct {
-	factory func(context.Context) (V, error)
-}
-
-func (s *Submodule[V]) Get(ctx context.Context) (V, error) {
-	select {
-	case <-ctx.Done():
-		var v V
-		return v, ctx.Err()
-	default:
-		if c, ok := ctx.Value(s).(*Submodule[V]); ok {
-			return c.Get(ctx)
-		}
-		return s.factory(ctx)
-	}
-}
+type Get[T any] core.Get[T]
 
 // Create is a function that takes a factory function and an optional list of configuration functions.
 // It returns a pointer to a new Submodule instance.
@@ -38,28 +16,12 @@ func (s *Submodule[V]) Get(ctx context.Context) (V, error) {
 // If the Singleton mode is set in the configuration, the factory function will only be called once.
 // The result of the factory function will be cached and returned for all subsequent calls to the Get method of the Submodule.
 // If the Singleton mode is not set, the factory function will be called every time the Get method of the Submodule is called.
-func Create[K any, C Submodule[K]](factory func(context.Context) (K, error), configs ...ConfigFn) *C {
-	var (
-		k      K
-		e      error
-		doOnce sync.Once
-	)
-
-	c := buildConfig(configs...)
-
-	wf := factory
-	if c.mode == Singleton {
-		wf = func(ctx context.Context) (K, error) {
-			doOnce.Do(func() {
-				k, e = factory(ctx)
-			})
-			return k, e
-		}
-	}
-
-	return &C{
-		factory: wf,
-	}
+// @deprecated use Provide, Make or Craft instead
+func Create[K any](factory func(context.Context) (K, error), configs ...ConfigFn) Get[K] {
+	return Make[K](func() (K, error) {
+		ctx := context.Background()
+		return factory(ctx)
+	})
 }
 
 // Derive is a function that takes a factory function, a dependency, and an optional list of configuration functions.
@@ -71,11 +33,11 @@ func Create[K any, C Submodule[K]](factory func(context.Context) (K, error), con
 // The result of the factory function will be cached and returned for all subsequent calls to the Get method of the Submodule.
 // If the Singleton mode is set in the configuration, the factory function will only be called once.
 // If the Singleton mode is not set, the factory function will be called every time the Get method of the Submodule is called.
-func Derive[K any, D any, C *Submodule[K], DC Get[D]](
+func Derive[K any, D any, DC Get[D]](
 	factory func(context.Context, D) (K, error),
 	dep DC,
 	configs ...ConfigFn,
-) C {
+) Get[K] {
 	wf := func(ctx context.Context) (k K, e error) {
 		d, e := dep.Get(ctx)
 		if e != nil {
@@ -89,11 +51,11 @@ func Derive[K any, D any, C *Submodule[K], DC Get[D]](
 }
 
 // Execute executes a function with a submodule as a dependency.
-func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any, RC *Submodule[R]](
+func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any](
 	factory func(context.Context, V1, V2) (R, error),
 	c1 C1, c2 C2,
 	configs ...ConfigFn,
-) RC {
+) Get[R] {
 	wf := func(ctx context.Context) (r R, e error) {
 		v1, e := c1.Get(ctx)
 		if e != nil {
@@ -112,11 +74,11 @@ func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any, RC *Submodule[R]](
 }
 
 // Derive3 is a function that takes a factory function, three dependencies, and an optional list of configuration functions.
-func Derive3[V1 any, V2 any, V3 any, C1 Get[V1], C2 Get[V2], C3 Get[V3], R any, RC *Submodule[R]](
+func Derive3[V1 any, V2 any, V3 any, C1 Get[V1], C2 Get[V2], C3 Get[V3], R any](
 	factory func(context.Context, V1, V2, V3) (R, error),
 	c1 C1, c2 C2, c3 C3,
 	configs ...ConfigFn,
-) RC {
+) Get[R] {
 	wf := func(ctx context.Context) (r R, e error) {
 		v1, e := c1.Get(ctx)
 		if e != nil {
@@ -151,11 +113,4 @@ func Execute[O any, D any, DC Get[D]](
 	}
 
 	return executor(ctx, d)
-}
-func Prestage[D any, O any](
-	factory func(ctx context.Context, d D) (O, error),
-) func(dep Get[D], configs ...ConfigFn) Get[O] {
-	return func(dep Get[D], configs ...ConfigFn) Get[O] {
-		return Derive(factory, dep, configs...)
-	}
 }
