@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -8,33 +9,37 @@ import (
 	"github.com/timandy/routine"
 )
 
+type Get[V any] interface {
+	Get(context.Context) (V, error)
+}
+
 type In struct{}
 type Self struct {
-	Dependencies []Gettable
+	Dependencies []Retrievable
 }
 
 var InType = reflect.TypeOf(In{})
 var SelfType = reflect.TypeOf(Self{})
 
-type Value[T any] struct {
+type Value struct {
 	mu        sync.Mutex
-	value     T
+	value     reflect.Value
 	e         error
 	initiated bool
 }
 
 type store struct {
 	mu     sync.Mutex
-	values map[Gettable]*Value[any]
+	values map[Retrievable]*Value
 }
 
-func (s *store) Init(g Gettable) *Value[any] {
+func (s *store) Init(g Retrievable) *Value {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	v, ok := s.values[g]
 	if !ok {
-		v = &Value[any]{
+		v = &Value{
 			initiated: false,
 		}
 		s.values[g] = v
@@ -44,16 +49,16 @@ func (s *store) Init(g Gettable) *Value[any] {
 }
 
 var localStore = &store{
-	values: make(map[Gettable]*Value[any]),
+	values: make(map[Retrievable]*Value),
 }
 
 var threadLocalStore = routine.NewInheritableThreadLocalWithInitial(func() *store {
 	return &store{
-		values: make(map[Gettable]*Value[any]),
+		values: make(map[Retrievable]*Value),
 	}
 })
 
-var sandboxFlag = routine.NewInheritableThreadLocalWithInitial[bool](func() bool {
+var sandboxFlag = routine.NewInheritableThreadLocalWithInitial(func() bool {
 	return false
 })
 
@@ -79,16 +84,17 @@ func getStore() *store {
 type S[T any] struct {
 	Input        any
 	ProvideType  reflect.Type
-	Dependencies []Gettable
+	Dependencies []Retrievable
 }
 
-type Gettable interface {
-	Get() (any, error)
+type Retrievable interface {
+	Retrieve() (any, error)
 	CanResolve(reflect.Type) bool
 }
 
 type Submodule[T any] interface {
-	Gettable
+	Get[T]
+	Retrievable
 	SafeResolve() (T, error)
 	Resolve() T
 
@@ -114,7 +120,7 @@ func IsSelf(t reflect.Type) bool {
 	return t.AssignableTo(SelfType)
 }
 
-func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Gettable) (reflect.Value, error) {
+func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Retrievable) (reflect.Value, error) {
 	var pt reflect.Type
 	var pv reflect.Value
 
@@ -151,10 +157,10 @@ func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Gettable) (
 	return pv, nil
 }
 
-func ResolveType(t reflect.Type, dependencies []Gettable) (v reflect.Value, e error) {
+func ResolveType(t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
 	for _, d := range dependencies {
 		if d.CanResolve(t) {
-			vv, err := d.Get()
+			vv, err := d.Retrieve()
 			if err != nil {
 				return v, err
 			}
@@ -213,22 +219,26 @@ func (s *S[T]) SafeResolve() (t T, e error) {
 
 		result := reflect.ValueOf(s.Input).Call(args)
 		if len(result) == 1 {
-			v.value = result[0].Interface().(T)
+			v.value = result[0]
 		} else {
-			if result[1] != reflect.ValueOf(nil) {
+			v.value = result[0]
+			if !result[1].IsNil() {
 				v.e = result[1].Interface().(error)
-			} else {
-				v.value = result[0].Interface().(T)
 			}
 		}
 
 		v.initiated = true
 	}
+
 	if v.e != nil {
 		return t, v.e
 	}
 
-	return v.value.(T), v.e
+	if v.value.IsZero() {
+		return t, e
+	}
+
+	return v.value.Interface().(T), nil
 }
 
 func (s *S[T]) Resolve() T {
@@ -241,7 +251,7 @@ func (s *S[T]) Resolve() T {
 	return r
 }
 
-func (s *S[T]) Get() (any, error) {
+func (s *S[T]) Retrieve() (any, error) {
 	return s.SafeResolve()
 }
 
@@ -263,13 +273,17 @@ func (s *S[T]) Init(t T) {
 	defer v.mu.Unlock()
 
 	v.initiated = true
-	v.value = t
+	v.value = reflect.ValueOf(t)
 	v.e = nil
+}
+
+func (s *S[T]) Get(ctx context.Context) (T, error) {
+	return s.SafeResolve()
 }
 
 func Construct[T any](
 	input any,
-	dependencies ...Gettable,
+	dependencies ...Retrievable,
 ) Submodule[T] {
 	inputType := reflect.TypeOf(input)
 
@@ -289,7 +303,7 @@ func Construct[T any](
 
 		_, ok := ot.(T)
 		if !ok {
-			panic(fmt.Sprintf("invalid type: %v", ot))
+			panic(fmt.Sprintf("invalid type: %v, %s", ot, provideType.String()))
 		}
 	}
 

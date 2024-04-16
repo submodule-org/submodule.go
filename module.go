@@ -19,11 +19,11 @@ func ProvideWithError[T any](fn func() (T, error)) core.Submodule[T] {
 	return core.Construct[T](fn)
 }
 
-func Make[T any](fn any, dependencies ...core.Gettable) core.Submodule[T] {
+func Make[T any](fn any, dependencies ...core.Retrievable) core.Submodule[T] {
 	return core.Construct[T](fn, dependencies...)
 }
 
-func Craft[T any](t T, dependencies ...core.Gettable) core.Submodule[T] {
+func Craft[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
 	tt := reflect.TypeOf(t)
 
 	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer {
@@ -41,11 +41,11 @@ func Craft[T any](t T, dependencies ...core.Gettable) core.Submodule[T] {
 	}, dependencies...)
 }
 
-func Group[T any](s ...core.Gettable) core.Submodule[[]T] {
+func Group[T any](s ...core.Retrievable) core.Submodule[[]T] {
 	return core.Construct[[]T](func() []T {
 		var v []T
 		for _, submodule := range s {
-			t, e := submodule.Get()
+			t, e := submodule.Retrieve()
 			if e != nil {
 				panic(e)
 			}
@@ -57,10 +57,10 @@ func Group[T any](s ...core.Gettable) core.Submodule[[]T] {
 	})
 }
 
-func Prepend[T any](s core.Submodule[T], dependencies ...core.Gettable) core.Submodule[T] {
+func Prepend[T any](s core.Submodule[T], dependencies ...core.Retrievable) core.Submodule[T] {
 	osm := s.(*core.S[T])
 
-	var updatedDependencies []core.Gettable
+	var updatedDependencies []core.Retrievable
 	updatedDependencies = append(updatedDependencies, dependencies...)
 	updatedDependencies = append(updatedDependencies, osm.Dependencies...)
 

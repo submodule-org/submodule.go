@@ -304,6 +304,26 @@ func TestModuleFunction(t *testing.T) {
 		}
 	})
 
+	t.Run("make with error should be fine", func(t *testing.T) {
+		me := Make[int](func() (int, error) {
+			return 0, fmt.Errorf("error 2")
+		})
+
+		ne := Make[int](func() (int, error) {
+			return 0, nil
+		})
+
+		_, e := me.SafeResolve()
+		if e == nil {
+			t.FailNow()
+		}
+
+		_, e = ne.SafeResolve()
+		if e != nil {
+			t.FailNow()
+		}
+	})
+
 	t.Run("error should be treated well", func(t *testing.T) {
 		ae := ProvideWithError(func() (int, error) {
 			return 0, fmt.Errorf("error_0")
