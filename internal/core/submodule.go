@@ -45,13 +45,11 @@ func (s *store) Init(g Gettable) *Value[any] {
 
 var localStore = &store{
 	values: make(map[Gettable]*Value[any]),
-	mu:     sync.Mutex{},
 }
 
 var threadLocalStore = routine.NewInheritableThreadLocalWithInitial(func() *store {
 	return &store{
 		values: make(map[Gettable]*Value[any]),
-		mu:     sync.Mutex{},
 	}
 })
 
