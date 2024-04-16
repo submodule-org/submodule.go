@@ -1,39 +1,41 @@
-# Simplify Service Lifecycle Management in Go with Submodule
+# Managing dependency with Submodule
 
-**Effortlessly manage the lifecycle of your services in Go with Submodule**, a lightweight and versatile library designed to streamline service management. Say goodbye to complex dependency handling, configuration management, and testing challenges.
+![common case](common-case.png "Common case")
 
-## Clear Structure, Easy Management
+Does the demonstrated diagram look familiar to you? A lot of applications will look just like so.
 
-* **Organize services with ease:** Wrap your service creation functions and chain them together for a clear and organized structure.
-* **Simplify complex dependencies:** Manage and understand intricate dependencies between services more effectively.
-* **Seamlessly integrate with your framework:** Bring Submodule into your existing frameworks and utilize its power wherever you have an async function.
-* **Serverless:** Initialize what function needs, not what framework wants
+Without any IoC or Dependency Injection framework / libraries, those applications will suffer from those issues
+- Everything centralized in `main` method, and will be scattered to all services
+- The higher level of the component you want to test, it'll be more complicated to setup tests
 
-## Streamlined Testing
+Tak `Register user handler` as an example, to setup the test for it
+- You'll need to mock `User service`
+- Or you'll need to mock `Db connection`
+- Or you'll need to mock `Config`
 
-* **Flexible testing environment:** Easily change dependencies for testing purposes, promoting testability and isolation.
-* **Testable code chunks:** Organize your code into smaller, testable units, facilitating robust testing.
-* **Controlled lifecycle management:** Implement unit tests and integration tests with ease by controlling the lifecycle of services.
+`Submodule` was born to balance the Ioc wiring, so you don't have to pull your hairs just to test your app
 
-## Lightweight and Simple
+# How does Submodule work?
 
-* **Quick to understand and adopt:** Experience the simplicity and elegance of Submodule, even for developers new to the library.
+Submodule is built around the concept of function composition. A component will be hidden/lazy initialized behind a function.
+And if another module requires that component, submodule will associate those factory functions. The initialization will only happen when one of those components got used
 
-Discover a painless way to manage the lifecycle of your services in Go with Submodule. Enhance your development workflow, improve code maintainability, and simplify testing processes.
+So, Submodule will just replicate exactly what described as dependencies in the diagram, and only initialized when one of those components got called
 
-## 💡 Usage
+Then, with the knowledge of dependencies like so, Submodule will initialize just what it is needed to support testing
 
-You can import `submodule` using:
+# Enough talk, show me the code
 
 ```go
+package main
+
 import (
-    "github.com/submodule-org/submodule.go"
+	"fmt"
+	"net/http"
+
+	"github.com/submodule-org/submodule.go"
 )
-```
 
-Then create a submodule like this:
-
-```go
 type Config struct {
 	Host     string
 	Port     int
@@ -87,8 +89,5 @@ func main() {
 	server := ServerMod.Resolve()
 	server.Start()
 }
-```
 
-## 📚 Documentation
-see [godoc](https://pkg.go.dev/github.com/submodule-org/submodule.go)
-more examples in [submodule_test.go](module_test.go)
+```

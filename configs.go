@@ -7,27 +7,19 @@ const (
 	Singleton
 )
 
-func buildConfig(configs ...ConfigFn) Config {
-	c := defaultConfig
-	for _, cm := range configs {
-		c = cm(c)
-	}
-	return c
-}
-
+// Deprecated: No longer supports Prototype or Singleton, use function instead
 type Config struct{ mode Mode }
 
-var defaultConfig = Config{
-	mode: Singleton,
-}
-
+// Deprecated: No longer supports Prototype or Singleton, use function instead
 type ConfigFn = func(config Config) Config
 
+// Deprecated: No longer supports Prototype or Singleton, use function instead
 var SetPrototype = func(config Config) Config {
 	config.mode = Prototype
 	return config
 }
 
+// Deprecated: No longer supports Prototype or Singleton, use function instead
 var SetSingleton = func(config Config) Config {
 	config.mode = Singleton
 	return config
