@@ -16,7 +16,7 @@ type Get[T any] core.Get[T]
 // If the Singleton mode is set in the configuration, the factory function will only be called once.
 // The result of the factory function will be cached and returned for all subsequent calls to the Get method of the Submodule.
 // If the Singleton mode is not set, the factory function will be called every time the Get method of the Submodule is called.
-// @deprecated use Provide, Make or Craft instead
+// Deprecated: use Provide, Make or Craft instead
 func Create[K any](factory func(context.Context) (K, error), configs ...ConfigFn) Get[K] {
 	return Make[K](func() (K, error) {
 		ctx := context.Background()
@@ -33,6 +33,7 @@ func Create[K any](factory func(context.Context) (K, error), configs ...ConfigFn
 // The result of the factory function will be cached and returned for all subsequent calls to the Get method of the Submodule.
 // If the Singleton mode is set in the configuration, the factory function will only be called once.
 // If the Singleton mode is not set, the factory function will be called every time the Get method of the Submodule is called.
+// Deprecated: use Make or Craft instead
 func Derive[K any, D any, DC Get[D]](
 	factory func(context.Context, D) (K, error),
 	dep DC,
@@ -51,6 +52,7 @@ func Derive[K any, D any, DC Get[D]](
 }
 
 // Execute executes a function with a submodule as a dependency.
+// Deprecated: use Provide, Make or Craft instead
 func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any](
 	factory func(context.Context, V1, V2) (R, error),
 	c1 C1, c2 C2,
@@ -74,6 +76,7 @@ func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any](
 }
 
 // Derive3 is a function that takes a factory function, three dependencies, and an optional list of configuration functions.
+// Deprecated: use Provide, Make or Craft instead
 func Derive3[V1 any, V2 any, V3 any, C1 Get[V1], C2 Get[V2], C3 Get[V3], R any](
 	factory func(context.Context, V1, V2, V3) (R, error),
 	c1 C1, c2 C2, c3 C3,
@@ -101,6 +104,7 @@ func Derive3[V1 any, V2 any, V3 any, C1 Get[V1], C2 Get[V2], C3 Get[V3], R any](
 	return Create(wf, configs...)
 }
 
+// Deprecated: WIP, will come with a better version later
 func Execute[O any, D any, DC Get[D]](
 	ctx context.Context,
 	executor func(context.Context, D) (O, error),
