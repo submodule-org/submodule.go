@@ -1,7 +1,9 @@
 package submodule
 
+// Deprecated: No longer supports Prototype or Singleton, use function instead
 type Mode int8
 
+// Deprecated: No longer supports Prototype or Singleton, use function instead
 const (
 	Prototype Mode = iota
 	Singleton
