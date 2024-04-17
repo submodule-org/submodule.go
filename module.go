@@ -34,7 +34,7 @@ var Run = core.Run
 // `Make` help you create a Submodule from a function
 // `Make` input must be a function which
 //
-// # submodule.In embedded
+// # Any types
 //
 // With In embedded, all fields of the struct will be resolved
 // against dependencies
@@ -45,7 +45,7 @@ var Run = core.Run
 //
 // in the example above, s, l and c will be resolved against dependencies
 //
-// # Other types
+// # submodule.In embedded
 //
 // Will be resolved as a whole against dependencies
 //
