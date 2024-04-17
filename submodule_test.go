@@ -34,6 +34,23 @@ func TestSubmodule(t *testing.T) {
 		require.Equal(t, count, 1)
 	})
 
+	t.Run("Can mock", func(t *testing.T) {
+		config := Create(func(ctx context.Context) (string, error) {
+			return "myconfig", nil
+		})
+
+		mockConfig := Create(func(ctx context.Context) (string, error) {
+			return "mock", nil
+		})
+
+		derived := Derive(func(ctx context.Context, config string) (string, error) {
+			return config, nil
+		}, config)
+
+		result := Prepend(derived, mockConfig).Resolve()
+		require.Equal(t, "mock", result)
+	})
+
 	t.Run("Derive can also be singleton", func(t *testing.T) {
 		count := 0
 		counter := Create(func(ctx context.Context) (x int, e error) {

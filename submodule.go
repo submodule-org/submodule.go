@@ -18,72 +18,39 @@ func Create[K any](factory func(context.Context) (K, error), configs ...ConfigFn
 }
 
 // Deprecated: use Make or Craft instead
-func Derive[K any, D any, DC Get[D]](
+func Derive[K any, D any](
 	factory func(context.Context, D) (K, error),
-	dep DC,
+	dep core.Submodule[D],
 	configs ...ConfigFn,
 ) core.Submodule[K] {
-	wf := func(ctx context.Context) (k K, e error) {
-		d, e := dep.Get(ctx)
-		if e != nil {
-			return
-		}
-
+	return Make[K](func(d D) (K, error) {
+		ctx := context.Background()
 		return factory(ctx, d)
-	}
-
-	return Create(wf, configs...)
+	}, dep)
 }
 
 // Deprecated: use Provide, Make or Craft instead
-func Derive2[V1 any, V2 any, C1 Get[V1], C2 Get[V2], R any](
+func Derive2[V1 any, V2 any, R any](
 	factory func(context.Context, V1, V2) (R, error),
-	c1 C1, c2 C2,
+	c1 core.Submodule[V1], c2 core.Submodule[V2],
 	configs ...ConfigFn,
 ) core.Submodule[R] {
-	wf := func(ctx context.Context) (r R, e error) {
-		v1, e := c1.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
-		v2, e := c2.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
+	return Make[R](func(v1 V1, v2 V2) (R, error) {
+		ctx := context.Background()
 		return factory(ctx, v1, v2)
-	}
-
-	return Create(wf, configs...)
+	}, c1, c2)
 }
 
 // Deprecated: use Provide, Make or Craft instead
-func Derive3[V1 any, V2 any, V3 any, C1 Get[V1], C2 Get[V2], C3 Get[V3], R any](
+func Derive3[V1 any, V2 any, V3 any, R any](
 	factory func(context.Context, V1, V2, V3) (R, error),
-	c1 C1, c2 C2, c3 C3,
+	c1 core.Submodule[V1], c2 core.Submodule[V2], c3 core.Submodule[V3],
 	configs ...ConfigFn,
 ) core.Submodule[R] {
-	wf := func(ctx context.Context) (r R, e error) {
-		v1, e := c1.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
-		v2, e := c2.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
-		v3, e := c3.Get(ctx)
-		if e != nil {
-			return r, e
-		}
-
+	return Make[R](func(v1 V1, v2 V2, v3 V3) (R, error) {
+		ctx := context.Background()
 		return factory(ctx, v1, v2, v3)
-	}
-
-	return Create(wf, configs...)
+	}, c1, c2, c3)
 }
 
 // Deprecated: WIP, will come with a better version later
