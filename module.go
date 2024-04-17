@@ -28,15 +28,8 @@ type In = core.In
 // RunInSandbox let the submodule to be initiated in a sandbox environment. All initialization will be isolated and will not impact other call. Great for parallel testing
 var RunInSandbox = core.RunInSandbox
 
-// Provide help you create a Submodule from a factory function. Provide does not rely on any dependencies
-func Provide[T any](fn func() T) core.Submodule[T] {
-	return core.Construct[T](fn)
-}
-
-// ProvideWithError help you create a Submodule from a factory function that may cause an error
-func ProvideWithError[T any](fn func() (T, error)) core.Submodule[T] {
-	return core.Construct[T](fn)
-}
+// Run let the consumer to execute a function with dependencies
+var Run = core.Run
 
 // `Make` help you create a Submodule from a function
 // `Make` input must be a function which
@@ -76,10 +69,10 @@ func Make[T any](fn any, dependencies ...core.Retrievable) core.Submodule[T] {
 //	  Config Config
 //	}
 //
-//	var ServerMod = submodule.Craft[Server](&Server{}, LoggerMod, ConfigMod)
+//	var ServerMod = submodule.Resolve[Server](&Server{}, LoggerMod, ConfigMod)
 //
 // In the example above, Server.Logger and Server.Config will be resolved against dependencies
-func Craft[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
+func Resolve[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
 	tt := reflect.TypeOf(t)
 
 	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer {
@@ -112,17 +105,4 @@ func Group[T any](s ...core.Retrievable) core.Submodule[[]T] {
 
 		return v
 	})
-}
-
-// Prepend clone the submodule and prepend the dependencies.
-// As dependencies are resolved from left to right,
-// prepending dependency let you replace certain implementation with others
-func Prepend[T any](s core.Submodule[T], dependencies ...core.Retrievable) core.Submodule[T] {
-	osm := s.(*core.S[T])
-
-	var updatedDependencies []core.Retrievable
-	updatedDependencies = append(updatedDependencies, dependencies...)
-	updatedDependencies = append(updatedDependencies, osm.Dependencies...)
-
-	return core.Construct[T](osm.Input, updatedDependencies...)
 }

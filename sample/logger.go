@@ -18,4 +18,4 @@ func (l *logger) Log(msg string) string {
 	return fmt.Sprintf("%s: %s\n", l.Config.LogLevel, msg)
 }
 
-var LoggerMod = submodule.Craft[Logger](&logger{}, ConfigMod)
+var LoggerMod = submodule.Resolve[Logger](&logger{}, ConfigMod)

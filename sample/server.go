@@ -26,7 +26,7 @@ func (s *server) Start() {
 	s.EmptyHandler.Handle()
 }
 
-var ServerMod = submodule.Craft[Server](
+var ServerMod = submodule.Resolve[Server](
 	&server{},
 	ConfigMod,
 	LoggerMod,

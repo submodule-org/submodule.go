@@ -23,7 +23,7 @@ func LoadConfig() Config {
 }
 
 // ConfigMod will be the singleton container for config value
-var ConfigMod = submodule.Provide(LoadConfig)
+var ConfigMod = submodule.Make[Config](LoadConfig)
 
 type logger struct {
 	LogLevel string
@@ -54,7 +54,7 @@ func (s *server) Start() {
 	}()
 }
 
-var ServerMod = submodule.Craft(&server{}, ConfigMod, LoggerMod)
+var ServerMod = submodule.Resolve(&server{}, ConfigMod, LoggerMod)
 
 func main() {
 	server := ServerMod.Resolve()

@@ -18,4 +18,4 @@ func (db *db) Query() {
 	fmt.Printf("queried")
 }
 
-var DbMod = submodule.Craft[Db](&db{}, ConfigMod)
+var DbMod = submodule.Resolve[Db](&db{}, ConfigMod)

@@ -83,42 +83,6 @@ func TestModuleFunction(t *testing.T) {
 		})
 	})
 
-	t.Run("overriding", func(t *testing.T) {
-		type A struct {
-			Name string
-		}
-
-		type B struct {
-			Prefix string
-		}
-
-		a := Make[A](func() A {
-			return A{
-				Name: "hello",
-			}
-		})
-
-		aa := Make[A](func() A {
-			return A{
-				Name: "world",
-			}
-		})
-
-		b := Make[B](func(a A) B {
-			return B{
-				Prefix: a.Name + "hello",
-			}
-		}, a)
-
-		mb := Prepend(b, aa)
-		xb := mb.Resolve()
-
-		if xb.Prefix != "worldhello" {
-			fmt.Printf("%+v\n", xb)
-			t.FailNow()
-		}
-	})
-
 	t.Run("singleton", func(t *testing.T) {
 		i := 0
 
@@ -157,7 +121,7 @@ func TestModuleFunction(t *testing.T) {
 
 		a := As{}
 
-		cai := Craft[AI](a)
+		cai := Resolve[AI](a)
 		rcai, e := cai.SafeResolve()
 
 		if e != nil {
@@ -165,7 +129,7 @@ func TestModuleFunction(t *testing.T) {
 		}
 		rcai.Hello()
 
-		cbi := Craft[BI](&a)
+		cbi := Resolve[BI](&a)
 
 		rcbi, e := cbi.SafeResolve()
 
@@ -181,13 +145,13 @@ func TestModuleFunction(t *testing.T) {
 			Name string
 		}
 
-		ma := Provide(func() A {
+		ma := Make[A](func() A {
 			return A{
 				Name: "hello",
 			}
 		})
 
-		mb := Provide(func() *A {
+		mb := Make[*A](func() *A {
 			return &A{
 				Name: "world",
 			}
@@ -275,7 +239,7 @@ func TestModuleFunction(t *testing.T) {
 	})
 
 	t.Run("can use init and reset to init and reset", func(t *testing.T) {
-		i1 := Provide(func() int {
+		i1 := Make[int](func() int {
 			return 1
 		})
 
@@ -325,7 +289,7 @@ func TestModuleFunction(t *testing.T) {
 	})
 
 	t.Run("error should be treated well", func(t *testing.T) {
-		ae := ProvideWithError(func() (int, error) {
+		ae := Make[int](func() (int, error) {
 			return 0, fmt.Errorf("error_0")
 		})
 
@@ -354,7 +318,7 @@ func TestModuleFunction(t *testing.T) {
 	})
 
 	t.Run("test run in sandbox", func(t *testing.T) {
-		x := Provide(func() *Counter {
+		x := Make[*Counter](func() *Counter {
 			return &Counter{
 				Count: 0,
 			}
@@ -371,6 +335,35 @@ func TestModuleFunction(t *testing.T) {
 		if ax.Count != 0 && xx.Count != 1 {
 			t.Fail()
 		}
+	})
+
+	t.Run("test run", func(t *testing.T) {
+		RunInSandbox(func() {
+			x := Make[*Counter](func() *Counter {
+				return &Counter{
+					Count: 0,
+				}
+			})
+
+			e := Run(func(c *Counter, p struct {
+				In
+				Counter *Counter
+			}) {
+				c.Plus()
+				p.Counter.Plus()
+			}, x)
+
+			if e != nil {
+				t.Fatalf("Run failed %+v", e)
+			}
+
+			ax := x.Resolve()
+			ax.Plus()
+
+			if ax.Count != 3 {
+				t.Fail()
+			}
+		})
 	})
 }
 

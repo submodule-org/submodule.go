@@ -54,16 +54,21 @@ func Derive3[V1 any, V2 any, V3 any, R any](
 }
 
 // Deprecated: WIP, will come with a better version later
-func Execute[O any, D any, DC Get[D]](
+func Execute[O any, D any](
 	ctx context.Context,
-	executor func(context.Context, D) (O, error),
-	dep DC,
+	executor func(context.Context, D) (o O, e error),
+	dep core.Submodule[D],
 ) (o O, e error) {
-	d, e := dep.Get(ctx)
+	e = core.Run(func(d D) error {
+		ao, e := executor(ctx, d)
+		o = ao
+
+		return e
+	}, dep)
 
 	if e != nil {
 		return o, e
 	}
 
-	return executor(ctx, d)
+	return o, nil
 }

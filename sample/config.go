@@ -19,4 +19,4 @@ func collectConfig() Config {
 	}
 }
 
-var ConfigMod = submodule.Provide(collectConfig)
+var ConfigMod = submodule.Make[Config](collectConfig)

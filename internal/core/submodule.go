@@ -158,6 +158,18 @@ func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Retrievable
 }
 
 func ResolveType(t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
+	if IsInEmbedded(t) {
+		var sv reflect.Value
+		if t.Kind() == reflect.Pointer {
+			sv = reflect.New(t.Elem())
+		} else {
+			sv = reflect.New(t)
+		}
+
+		v, e = ResolveEmbedded(t, sv, dependencies)
+		return
+	}
+
 	for _, d := range dependencies {
 		if d.CanResolve(t) {
 			vv, err := d.Retrieve()
@@ -187,22 +199,6 @@ func (s *S[T]) SafeResolve() (t T, e error) {
 
 		for i := 0; i < inputType.NumIn(); i++ {
 			argsTypes[i] = inputType.In(i)
-
-			if IsInEmbedded(argsTypes[i]) {
-				var sv reflect.Value
-				if argsTypes[i].Kind() == reflect.Pointer {
-					sv = reflect.New(argsTypes[i].Elem())
-				} else {
-					sv = reflect.New(argsTypes[i])
-				}
-
-				v, e := ResolveEmbedded(argsTypes[i], sv, s.Dependencies)
-				if e != nil {
-					return t, fmt.Errorf("unable to resolve embedded type: %s\n %w", argsTypes[i].String(), e)
-				}
-				args[i] = v
-				continue
-			}
 
 			if IsSelf(argsTypes[i]) {
 				args[i] = reflect.ValueOf(Self{Dependencies: s.Dependencies})
@@ -281,14 +277,75 @@ func (s *S[T]) Get(ctx context.Context) (T, error) {
 	return s.SafeResolve()
 }
 
+func validateInput(input any, isProvider bool) error {
+	inputType := reflect.TypeOf(input)
+
+	if inputType.Kind() != reflect.Func {
+		return fmt.Errorf("only func(...any) is accepted, received: %v", inputType.String())
+	}
+
+	if isProvider {
+		if inputType.NumOut() == 0 {
+			return fmt.Errorf("provider must return something %v", inputType.String())
+		}
+
+		if inputType.NumOut() > 2 {
+			return fmt.Errorf("provider must return only one or two values %v", inputType.String())
+		}
+
+		if inputType.NumOut() == 2 && !inputType.Out(1).AssignableTo(reflect.TypeOf((*error)(nil)).Elem()) {
+			return fmt.Errorf("provider returning a tuple, the 2nd type must be error %v", inputType.String())
+		}
+	} else {
+		if inputType.NumOut() > 1 {
+			return fmt.Errorf("run fn can only return none or error %v", inputType.String())
+		}
+
+		if inputType.NumOut() == 1 && !inputType.Out(0).AssignableTo(reflect.TypeOf((*error)(nil)).Elem()) {
+			return fmt.Errorf("run fn can only return none or error %v", inputType.String())
+		}
+	}
+
+	return nil
+}
+
+func Run(input any, dependencies ...Retrievable) error {
+	if err := validateInput(input, false); err != nil {
+		return err
+	}
+
+	runType := reflect.TypeOf(input)
+	args := make([]reflect.Value, 0, runType.NumIn())
+
+	for i := 0; i < runType.NumIn(); i++ {
+		v, e := ResolveType(runType.In(i), dependencies)
+		if e != nil {
+			fmt.Printf("Resolve failed %+v\n", e)
+			return e
+		}
+
+		args = append(args, v)
+	}
+
+	r := reflect.ValueOf(input).Call(args)
+
+	if len(r) == 1 {
+		if !r[0].IsNil() {
+			return r[0].Interface().(error)
+		}
+	}
+
+	return nil
+}
+
 func Construct[T any](
 	input any,
 	dependencies ...Retrievable,
 ) Submodule[T] {
 	inputType := reflect.TypeOf(input)
 
-	if inputType.Kind() != reflect.Func {
-		panic(fmt.Sprintf("only func(...any) is accepted, received: %v", inputType.String()))
+	if err := validateInput(input, true); err != nil {
+		panic(err)
 	}
 
 	provideType := inputType.Out(0)

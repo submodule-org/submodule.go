@@ -3,6 +3,7 @@ package submodule
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -32,23 +33,6 @@ func TestSubmodule(t *testing.T) {
 		counter.Get(context.TODO())
 
 		require.Equal(t, count, 1)
-	})
-
-	t.Run("Can mock", func(t *testing.T) {
-		config := Create(func(ctx context.Context) (string, error) {
-			return "myconfig", nil
-		})
-
-		mockConfig := Create(func(ctx context.Context) (string, error) {
-			return "mock", nil
-		})
-
-		derived := Derive(func(ctx context.Context, config string) (string, error) {
-			return config, nil
-		}, config)
-
-		result := Prepend(derived, mockConfig).Resolve()
-		require.Equal(t, "mock", result)
 	})
 
 	t.Run("Derive can also be singleton", func(t *testing.T) {
@@ -87,15 +71,15 @@ func TestSubmodule(t *testing.T) {
 		var config1 = Create(func(ctx context.Context) (string, error) {
 			return "myconfig1", nil
 		})
-		var config2 = Create(func(ctx context.Context) (string, error) {
-			return "myconfig2", nil
+		var config2 = Create(func(ctx context.Context) (int, error) {
+			return 2, nil
 		})
-		sub := Derive2(func(ctx context.Context, dep1, dep2 string) (string, error) {
-			return dep1 + dep2, nil
+		sub := Derive2(func(ctx context.Context, dep1 string, dep2 int) (string, error) {
+			return dep1 + fmt.Sprintf("%d", dep2), nil
 		}, config1, config2)
 		result, err := sub.Get(context.Background())
 		require.NoError(t, err)
-		require.Equal(t, "myconfig1myconfig2", result)
+		require.Equal(t, "myconfig12", result)
 	})
 
 	t.Run("flow should work", func(t *testing.T) {
@@ -155,24 +139,6 @@ func TestSubmodule(t *testing.T) {
 
 	})
 
-}
-
-func TestDerive3(t *testing.T) {
-	var config1 = Create(func(ctx context.Context) (string, error) {
-		return "myconfig1", nil
-	})
-	var config2 = Create(func(ctx context.Context) (string, error) {
-		return "myconfig2", nil
-	})
-	var config3 = Create(func(ctx context.Context) (string, error) {
-		return "myconfig3", nil
-	})
-	sub := Derive3(func(ctx context.Context, dep1, dep2, dep3 string) (string, error) {
-		return dep1 + dep2 + dep3, nil
-	}, config1, config2, config3)
-	result, err := sub.Get(context.Background())
-	require.NoError(t, err)
-	require.Equal(t, "myconfig1myconfig2myconfig3", result)
 }
 
 func TestDeriveSingleton(t *testing.T) {

@@ -13,7 +13,7 @@ func (h *emptyHandler) Handle() {
 
 }
 
-var EmptyHandlerMod = submodule.Craft[Handler](
+var EmptyHandlerMod = submodule.Resolve[Handler](
 	&emptyHandler{},
 	LoggerMod,
 	DbMod,
