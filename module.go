@@ -25,6 +25,8 @@ import (
 // In is the indicator struct to mark a field to be injected
 type In = core.In
 
+type Self = core.Self
+
 // RunInSandbox let the submodule to be initiated in a sandbox environment. All initialization will be isolated and will not impact other call. Great for parallel testing
 var RunInSandbox = core.RunInSandbox
 

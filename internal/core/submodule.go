@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/timandy/routine"
+	"github.com/jtolds/gls"
 )
 
 type Get[V any] interface {
@@ -52,30 +52,26 @@ var localStore = &store{
 	values: make(map[Retrievable]*Value),
 }
 
-var threadLocalStore = routine.NewInheritableThreadLocalWithInitial(func() *store {
-	return &store{
-		values: make(map[Retrievable]*Value),
-	}
-})
-
-var sandboxFlag = routine.NewInheritableThreadLocalWithInitial(func() bool {
-	return false
-})
+var mgr = gls.NewContextManager()
+var sandboxKey = gls.GenSym()
 
 func RunInSandbox(fn func()) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		sandboxFlag.Set(true)
-		fn()
+		mgr.SetValues(gls.Values{
+			sandboxKey: &store{
+				values: make(map[Retrievable]*Value),
+			},
+		}, fn)
 	}()
 	wg.Wait()
 }
 
 func getStore() *store {
-	if sandboxFlag.Get() {
-		return threadLocalStore.Get()
+	if s, ok := mgr.GetValue(sandboxKey); ok {
+		return s.(*store)
 	}
 
 	return localStore
@@ -353,14 +349,82 @@ func Construct[T any](
 	if provideType.Kind() == reflect.Interface {
 		gt := reflect.TypeOf((*T)(nil)).Elem()
 		if !gt.AssignableTo(provideType) {
-			panic(fmt.Sprintf("invalid type: %v", provideType))
+			panic(
+				fmt.Sprintf(
+					"generic type output mismatch. \n Expect: %s \n Providing: %s",
+					gt.String(),
+					provideType.String(),
+				),
+			)
 		}
 	} else {
 		ot := reflect.New(provideType).Elem().Interface()
 
 		_, ok := ot.(T)
 		if !ok {
-			panic(fmt.Sprintf("invalid type: %v, %s", ot, provideType.String()))
+			panic(
+				fmt.Sprintf(
+					"generic type output mismatch. \n Expect: %s \n Providing: %s",
+					ot,
+					provideType.String(),
+				),
+			)
+		}
+	}
+
+	// check feasibility
+	for i := 0; i < inputType.NumIn(); i++ {
+		canResolve := false
+
+		pt := inputType.In(i)
+		if IsSelf(pt) {
+			continue
+		}
+
+		if IsInEmbedded(pt) {
+			for fi := 0; fi < pt.NumField(); fi++ {
+				f := pt.Field(fi)
+
+				if f.Type == InType {
+					continue
+				}
+
+				for _, d := range dependencies {
+					if d.CanResolve(f.Type) {
+						canResolve = true
+						break
+					}
+				}
+
+				if !canResolve {
+					panic(
+						fmt.Sprintf(
+							"unable to resolve dependency for type: %s. \n Unable to resolve: %s of %s",
+							inputType.String(),
+							f.Type.String(),
+							pt.String(),
+						),
+					)
+				}
+			}
+			continue
+		}
+
+		for _, d := range dependencies {
+			if d.CanResolve(pt) {
+				canResolve = true
+				break
+			}
+		}
+
+		if !canResolve {
+			panic(
+				fmt.Sprintf(
+					"unable to resolve dependency for type: %s. \n Unable to resolve: %s",
+					inputType.String(),
+					pt.String(),
+				),
+			)
 		}
 	}
 

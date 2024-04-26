@@ -28,6 +28,38 @@ func TestModuleFunction(t *testing.T) {
 
 	})
 
+	t.Run("it should fail fast if it knows it can't resolve", func(t *testing.T) {
+		x := Make[int](func() int {
+			return 0
+		})
+
+		_ = Make[int](func(p core.Self) int {
+			return 1
+		})
+
+		_ = Make[int](func(p struct {
+			In
+			A int
+		}) int {
+			return 1
+		}, x)
+
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("It's expected to be panic")
+			}
+		}()
+
+		_ = Make[int](func() int {
+			return 0
+		})
+
+		_ = Make[int](func(i int) int {
+			return 1
+		})
+
+	})
+
 	t.Run("test dependency", func(t *testing.T) {
 		type A struct {
 			Name string
@@ -158,7 +190,7 @@ func TestModuleFunction(t *testing.T) {
 		})
 
 		a := Make[string](func(p struct {
-			core.In
+			In
 			A  A
 			Ap *A
 		}) string {
