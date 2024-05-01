@@ -18,19 +18,7 @@ package submodule
 import (
 	"fmt"
 	"reflect"
-
-	"github.com/submodule-org/submodule.go/internal/core"
 )
-
-// In is the indicator struct to mark a field to be injected
-type In = core.In
-
-type Self = core.Self
-
-var CreateStore = core.CreateStore
-
-// Run let the consumer to execute a function with dependencies
-var Run = core.Run
 
 // `Make` help you create a Submodule from a function
 // `Make` input must be a function which
@@ -59,8 +47,8 @@ var Run = core.Run
 //	}
 //
 // in the example above, Server, Logger and Config will be resolved against dependencies
-func Make[T any](fn any, dependencies ...core.Retrievable) core.Submodule[T] {
-	return core.Construct[T](fn, dependencies...)
+func Make[T any](fn any, dependencies ...Retrievable) Submodule[T] {
+	return construct[T](fn, dependencies...)
 }
 
 // Resolve fields of struct or struct pointer against given dependencies
@@ -73,15 +61,15 @@ func Make[T any](fn any, dependencies ...core.Retrievable) core.Submodule[T] {
 //	var ServerMod = submodule.Resolve[Server](&Server{}, LoggerMod, ConfigMod)
 //
 // In the example above, Server.Logger and Server.Config will be resolved against dependencies
-func Resolve[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
+func Resolve[T any](t T, dependencies ...Retrievable) Submodule[T] {
 	tt := reflect.TypeOf(t)
 
 	if tt.Kind() != reflect.Struct && tt.Kind() != reflect.Pointer {
 		panic(fmt.Sprintf("only struct or struct pointer : %v", tt.String()))
 	}
 
-	return core.Construct[T](func(self core.Self) T {
-		x, e := core.ResolveEmbedded(self.Store, tt, reflect.ValueOf(t), self.Dependencies)
+	return construct[T](func(self Self) T {
+		x, e := resolveEmbedded(self.Store, tt, reflect.ValueOf(t), self.Dependencies)
 
 		if e != nil {
 			panic(e)
@@ -92,11 +80,11 @@ func Resolve[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
 }
 
 // Group groups submodules and re-advertise as a single value
-func Group[T any](s ...core.Retrievable) core.Submodule[[]T] {
-	return core.Construct[[]T](func(self core.Self) []T {
+func Group[T any](s ...Retrievable) Submodule[[]T] {
+	return construct[[]T](func(self Self) []T {
 		var v []T
 		for _, submodule := range s {
-			t, e := submodule.Retrieve(self.Store)
+			t, e := submodule.retrieve(self.Store)
 			if e != nil {
 				panic(e)
 			}
