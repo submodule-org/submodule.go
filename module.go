@@ -27,8 +27,7 @@ type In = core.In
 
 type Self = core.Self
 
-// RunInSandbox let the submodule to be initiated in a sandbox environment. All initialization will be isolated and will not impact other call. Great for parallel testing
-var RunInSandbox = core.RunInSandbox
+var CreateStore = core.CreateStore
 
 // Run let the consumer to execute a function with dependencies
 var Run = core.Run
@@ -82,7 +81,7 @@ func Resolve[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
 	}
 
 	return core.Construct[T](func(self core.Self) T {
-		x, e := core.ResolveEmbedded(tt, reflect.ValueOf(t), self.Dependencies)
+		x, e := core.ResolveEmbedded(self.Store, tt, reflect.ValueOf(t), self.Dependencies)
 
 		if e != nil {
 			panic(e)
@@ -94,10 +93,10 @@ func Resolve[T any](t T, dependencies ...core.Retrievable) core.Submodule[T] {
 
 // Group groups submodules and re-advertise as a single value
 func Group[T any](s ...core.Retrievable) core.Submodule[[]T] {
-	return core.Construct[[]T](func() []T {
+	return core.Construct[[]T](func(self core.Self) []T {
 		var v []T
 		for _, submodule := range s {
-			t, e := submodule.Retrieve()
+			t, e := submodule.Retrieve(self.Store)
 			if e != nil {
 				panic(e)
 			}

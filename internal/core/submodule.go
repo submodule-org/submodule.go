@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
-
-	"github.com/jtolds/gls"
 )
 
 type Get[V any] interface {
@@ -15,6 +13,7 @@ type Get[V any] interface {
 
 type In struct{}
 type Self struct {
+	Store        *Store
 	Dependencies []Retrievable
 }
 
@@ -28,12 +27,12 @@ type Value struct {
 	initiated bool
 }
 
-type store struct {
+type Store struct {
 	mu     sync.Mutex
 	values map[Retrievable]*Value
 }
 
-func (s *store) Init(g Retrievable) *Value {
+func (s *Store) init(g Retrievable) *Value {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -48,32 +47,34 @@ func (s *store) Init(g Retrievable) *Value {
 	return v
 }
 
-var localStore = &store{
-	values: make(map[Retrievable]*Value),
+func (s *Store) InitValue(g Retrievable, v any) {
+	c := s.init(g)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.value = reflect.ValueOf(v)
+	c.initiated = true
 }
 
-var mgr = gls.NewContextManager()
-var sandboxKey = gls.GenSym()
+func (s *Store) InitError(g Retrievable, e error) {
+	c := s.init(g)
 
-func RunInSandbox(fn func()) {
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		mgr.SetValues(gls.Values{
-			sandboxKey: &store{
-				values: make(map[Retrievable]*Value),
-			},
-		}, fn)
-	}()
-	wg.Wait()
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.e = e
+	c.initiated = true
 }
 
-func getStore() *store {
-	if s, ok := mgr.GetValue(sandboxKey); ok {
-		return s.(*store)
+func CreateStore() *Store {
+	return &Store{
+		values: make(map[Retrievable]*Value),
 	}
+}
 
+var localStore = CreateStore()
+
+func getStore() *Store {
 	return localStore
 }
 
@@ -84,7 +85,7 @@ type S[T any] struct {
 }
 
 type Retrievable interface {
-	Retrieve() (any, error)
+	Retrieve(*Store) (any, error)
 	CanResolve(reflect.Type) bool
 }
 
@@ -94,8 +95,8 @@ type Submodule[T any] interface {
 	SafeResolve() (T, error)
 	Resolve() T
 
-	Init(T)
-	Reset()
+	ResolveWith(store *Store) T
+	SafeResolveWith(store *Store) (T, error)
 }
 
 func IsInEmbedded(t reflect.Type) bool {
@@ -116,9 +117,14 @@ func IsSelf(t reflect.Type) bool {
 	return t.AssignableTo(SelfType)
 }
 
-func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Retrievable) (reflect.Value, error) {
+func ResolveEmbedded(as *Store, t reflect.Type, v reflect.Value, dependencies []Retrievable) (reflect.Value, error) {
 	var pt reflect.Type
 	var pv reflect.Value
+
+	store := getStore()
+	if as != nil {
+		store = as
+	}
 
 	if t.Kind() == reflect.Pointer {
 		pv = reflect.Indirect(v)
@@ -138,7 +144,7 @@ func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Retrievable
 			return pv, fmt.Errorf("unable to resolve unexported field: %s, field is not exported", f.Name)
 		}
 
-		value, err := ResolveType(f.Type, dependencies)
+		value, err := ResolveType(store, f.Type, dependencies)
 		if err != nil {
 			return pv, err
 		}
@@ -153,7 +159,7 @@ func ResolveEmbedded(t reflect.Type, v reflect.Value, dependencies []Retrievable
 	return pv, nil
 }
 
-func ResolveType(t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
+func ResolveType(store *Store, t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
 	if IsInEmbedded(t) {
 		var sv reflect.Value
 		if t.Kind() == reflect.Pointer {
@@ -162,13 +168,13 @@ func ResolveType(t reflect.Type, dependencies []Retrievable) (v reflect.Value, e
 			sv = reflect.New(t)
 		}
 
-		v, e = ResolveEmbedded(t, sv, dependencies)
+		v, e = ResolveEmbedded(store, t, sv, dependencies)
 		return
 	}
 
 	for _, d := range dependencies {
 		if d.CanResolve(t) {
-			vv, err := d.Retrieve()
+			vv, err := d.Retrieve(store)
 			if err != nil {
 				return v, err
 			}
@@ -181,9 +187,25 @@ func ResolveType(t reflect.Type, dependencies []Retrievable) (v reflect.Value, e
 }
 
 func (s *S[T]) SafeResolve() (t T, e error) {
-	store := getStore()
+	return s.SafeResolveWith(nil)
+}
 
-	v := store.Init(s)
+func (s *S[T]) ResolveWith(as *Store) T {
+	t, e := s.SafeResolveWith(as)
+	if e != nil {
+		panic(e)
+	}
+
+	return t
+}
+
+func (s *S[T]) SafeResolveWith(as *Store) (t T, e error) {
+	store := getStore()
+	if as != nil {
+		store = as
+	}
+
+	v := store.init(s)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
@@ -197,11 +219,14 @@ func (s *S[T]) SafeResolve() (t T, e error) {
 			argsTypes[i] = inputType.In(i)
 
 			if IsSelf(argsTypes[i]) {
-				args[i] = reflect.ValueOf(Self{Dependencies: s.Dependencies})
+				args[i] = reflect.ValueOf(Self{
+					Store:        store,
+					Dependencies: s.Dependencies,
+				})
 				continue
 			}
 
-			v, error := ResolveType(argsTypes[i], s.Dependencies)
+			v, error := ResolveType(store, argsTypes[i], s.Dependencies)
 			if error != nil {
 				return t, error
 			}
@@ -243,8 +268,8 @@ func (s *S[T]) Resolve() T {
 	return r
 }
 
-func (s *S[T]) Retrieve() (any, error) {
-	return s.SafeResolve()
+func (s *S[T]) Retrieve(store *Store) (any, error) {
+	return s.SafeResolveWith(store)
 }
 
 func (s *S[T]) CanResolve(key reflect.Type) bool {
@@ -252,15 +277,15 @@ func (s *S[T]) CanResolve(key reflect.Type) bool {
 }
 
 func (s *S[T]) Reset() {
-	v := getStore().Init(s)
+	v := getStore().init(s)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
 	v.initiated = false
 }
 
-func (s *S[T]) Init(t T) {
-	v := getStore().Init(s)
+func (s *S[T]) init(t T) {
+	v := getStore().init(s)
 	v.mu.Lock()
 	defer v.mu.Unlock()
 
@@ -310,11 +335,13 @@ func Run(input any, dependencies ...Retrievable) error {
 		return err
 	}
 
+	store := getStore()
+
 	runType := reflect.TypeOf(input)
 	args := make([]reflect.Value, 0, runType.NumIn())
 
 	for i := 0; i < runType.NumIn(); i++ {
-		v, e := ResolveType(runType.In(i), dependencies)
+		v, e := ResolveType(store, runType.In(i), dependencies)
 		if e != nil {
 			fmt.Printf("Resolve failed %+v\n", e)
 			return e

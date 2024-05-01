@@ -270,36 +270,6 @@ func TestModuleFunction(t *testing.T) {
 
 	})
 
-	t.Run("can use init and reset to init and reset", func(t *testing.T) {
-		i1 := Make[int](func() int {
-			return 1
-		})
-
-		i2 := Make[int](func(i int) int {
-			return i + 2
-		}, i1)
-
-		i3 := Make[int](func(i int) int {
-			return i + 3
-		}, i2)
-
-		var r int
-		r = i3.Resolve()
-		if r != 6 {
-			t.FailNow()
-		}
-
-		i1.Reset()
-		i1.Init(-5)
-		i2.Reset()
-		i3.Reset()
-
-		r = i3.Resolve()
-		if r != 0 {
-			t.FailNow()
-		}
-	})
-
 	t.Run("make with error should be fine", func(t *testing.T) {
 		me := Make[int](func() (int, error) {
 			return 0, fmt.Errorf("error 2")
@@ -349,7 +319,7 @@ func TestModuleFunction(t *testing.T) {
 		}
 	})
 
-	t.Run("test run in sandbox", func(t *testing.T) {
+	t.Run("can use isolated store to maintain value", func(t *testing.T) {
 		x := Make[*Counter](func() *Counter {
 			return &Counter{
 				Count: 0,
@@ -358,44 +328,15 @@ func TestModuleFunction(t *testing.T) {
 
 		xx := x.Resolve()
 		xx.Plus()
-
-		var ax *Counter
-		RunInSandbox(func() {
-			ax = x.Resolve()
-		})
-
-		if ax.Count != 0 && xx.Count != 1 {
+		if xx.Count != 1 {
 			t.Fail()
 		}
-	})
 
-	t.Run("test run", func(t *testing.T) {
-		RunInSandbox(func() {
-			x := Make[*Counter](func() *Counter {
-				return &Counter{
-					Count: 0,
-				}
-			})
-
-			e := Run(func(c *Counter, p struct {
-				In
-				Counter *Counter
-			}) {
-				c.Plus()
-				p.Counter.Plus()
-			}, x)
-
-			if e != nil {
-				t.Fatalf("Run failed %+v", e)
-			}
-
-			ax := x.Resolve()
-			ax.Plus()
-
-			if ax.Count != 3 {
-				t.Fail()
-			}
-		})
+		as := CreateStore()
+		xy := x.ResolveWith(as)
+		if xy.Count != 0 {
+			t.Fail()
+		}
 	})
 }
 
