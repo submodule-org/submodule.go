@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"sync"
 )
 
 type Get[V any] interface {
@@ -19,64 +18,6 @@ type Self struct {
 
 var inType = reflect.TypeOf(In{})
 var selfType = reflect.TypeOf(Self{})
-
-type value struct {
-	mu        sync.Mutex
-	value     reflect.Value
-	e         error
-	initiated bool
-}
-
-type store struct {
-	mu     sync.Mutex
-	values map[Retrievable]*value
-}
-
-func (s *store) init(g Retrievable) *value {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	v, ok := s.values[g]
-	if !ok {
-		v = &value{
-			initiated: false,
-		}
-		s.values[g] = v
-	}
-
-	return v
-}
-
-func (s *store) InitValue(g Retrievable, v any) {
-	c := s.init(g)
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.value = reflect.ValueOf(v)
-	c.initiated = true
-}
-
-func (s *store) InitError(g Retrievable, e error) {
-	c := s.init(g)
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.e = e
-	c.initiated = true
-}
-
-func CreateStore() *store {
-	return &store{
-		values: make(map[Retrievable]*value),
-	}
-}
-
-var localStore = CreateStore()
-
-func getStore() *store {
-	return localStore
-}
 
 type s[T any] struct {
 	input        any
@@ -97,93 +38,6 @@ type Submodule[T any] interface {
 
 	ResolveWith(store *store) T
 	SafeResolveWith(store *store) (T, error)
-}
-
-func isInEmbedded(t reflect.Type) bool {
-	if t.Kind() != reflect.Struct {
-		return false
-	}
-
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		if f.Type == inType {
-			return true
-		}
-	}
-	return false
-}
-
-func isSelf(t reflect.Type) bool {
-	return t.AssignableTo(selfType)
-}
-
-func resolveEmbedded(as *store, t reflect.Type, v reflect.Value, dependencies []Retrievable) (reflect.Value, error) {
-	var pt reflect.Type
-	var pv reflect.Value
-
-	store := getStore()
-	if as != nil {
-		store = as
-	}
-
-	if t.Kind() == reflect.Pointer {
-		pv = reflect.Indirect(v)
-		pt = t.Elem()
-	} else {
-		pv = reflect.Indirect(v)
-		pt = t
-	}
-
-	for i := 0; i < pt.NumField(); i++ {
-		f := pt.Field(i)
-		if f.Type == inType {
-			continue
-		}
-
-		if !f.IsExported() {
-			return pv, fmt.Errorf("unable to resolve unexported field: %s, field is not exported", f.Name)
-		}
-
-		value, err := resolveType(store, f.Type, dependencies)
-		if err != nil {
-			return pv, err
-		}
-
-		pv.Field(i).Set(value)
-	}
-
-	if t.Kind() == reflect.Pointer {
-		return pv.Addr(), nil
-	}
-
-	return pv, nil
-}
-
-func resolveType(store *store, t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
-	if isInEmbedded(t) {
-		var sv reflect.Value
-		if t.Kind() == reflect.Pointer {
-			sv = reflect.New(t.Elem())
-		} else {
-			sv = reflect.New(t)
-		}
-
-		v, e = resolveEmbedded(store, t, sv, dependencies)
-		return
-	}
-
-	for _, d := range dependencies {
-		if d.canResolve(t) {
-			vv, err := d.retrieve(store)
-			if err != nil {
-				return v, err
-			}
-
-			v = reflect.ValueOf(vv)
-			return
-		}
-	}
-	return v, fmt.Errorf("unable to resolve dependency for type: %s", t.String())
 }
 
 func (s *s[T]) SafeResolve() (t T, e error) {
