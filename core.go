@@ -6,6 +6,12 @@ import (
 	"reflect"
 )
 
+// Old version of submodule requires context.Context to operate
+// The context acts as a temporary store so submodule can use that to
+// carry replacement
+//
+// To replace a submodule in chain, set the replacement submodule to the
+// original submodule ref
 type Get[V any] interface {
 	Get(context.Context) (V, error)
 }
