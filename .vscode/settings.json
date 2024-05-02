@@ -1,8 +1,5 @@
 {
   "references.preferredLocation": "view",
-  "gopls": {
-    "ui.semanticTokens": true
-  },
   "go.coverageOptions": "showUncoveredCodeOnly",
   "go.coverOnTestPackage": true,
   "go.formatTool": "gofumpt",
