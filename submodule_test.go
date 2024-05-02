@@ -2,9 +2,9 @@ package submodule_test
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/submodule-org/submodule.go"
 )
 
@@ -18,13 +18,8 @@ func TestModuleFunction(t *testing.T) {
 
 	t.Run("test module function", func(t *testing.T) {
 		s, e := ms().SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		if s != "hello" {
-			t.FailNow()
-		}
+		assert.NoError(t, e, "Resolve failed")
+		assert.Equal(t, "hello", s, "Unexpected result")
 
 	})
 
@@ -44,20 +39,11 @@ func TestModuleFunction(t *testing.T) {
 			return 1
 		}, x)
 
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("It's expected to be panic")
-			}
-		}()
-
-		_ = submodule.Make[int](func() int {
-			return 0
+		assert.Panics(t, func() {
+			submodule.Make[int](func(i int) int {
+				return 1
+			})
 		})
-
-		_ = submodule.Make[int](func(i int) int {
-			return 1
-		})
-
 	})
 
 	t.Run("test dependency", func(t *testing.T) {
@@ -81,37 +67,24 @@ func TestModuleFunction(t *testing.T) {
 		}, a)
 
 		xb, e := b.SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		if xb.Prefix != "hello" {
-			t.FailNow()
-		}
+		assert.NoError(t, e, "Resolve failed")
+		assert.Equal(t, "hello", xb.Prefix, "Unexpected result")
 
 	})
 
 	t.Run("declare wrong type", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("It's expected to be panic")
-			}
-		}()
-
-		submodule.Make[string](func() int {
-			return 0
+		assert.Panics(t, func() {
+			submodule.Make[string](func() int {
+				return 0
+			})
 		})
 	})
 
 	t.Run("declare wrong interface", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("It's expected to be panic")
-			}
-		}()
-
-		submodule.Make[BI](func() AI {
-			return As{}
+		assert.Panics(t, func() {
+			submodule.Make[BI](func() AI {
+				return As{}
+			})
 		})
 	})
 
@@ -123,17 +96,9 @@ func TestModuleFunction(t *testing.T) {
 			return i
 		})
 
-		_, e := s.SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		ni, _ := s.SafeResolve()
-
-		if ni != 1 {
-			fmt.Printf("%+v\n", ni)
-			t.FailNow()
-		}
+		x, e := s.SafeResolve()
+		assert.NoError(t, e, "Resolve failed")
+		assert.Equal(t, 1, x, "Unexpected result")
 	})
 
 	t.Run("expose as interface", func(t *testing.T) {
@@ -142,9 +107,7 @@ func TestModuleFunction(t *testing.T) {
 		})
 
 		xs, e := s.SafeResolve()
-		if e != nil {
-			t.FailNow()
-		}
+		assert.NoError(t, e, "Resolve failed")
 
 		xs.Hello()
 	})
@@ -155,19 +118,12 @@ func TestModuleFunction(t *testing.T) {
 
 		cai := submodule.Resolve[AI](a)
 		rcai, e := cai.SafeResolve()
-
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
+		assert.NoError(t, e, "Resolve failed")
 		rcai.Hello()
 
 		cbi := submodule.Resolve[BI](&a)
-
 		rcbi, e := cbi.SafeResolve()
-
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
+		assert.NoError(t, e, "Resolve failed")
 		rcbi.Goodbye()
 	})
 
@@ -178,15 +134,11 @@ func TestModuleFunction(t *testing.T) {
 		}
 
 		ma := submodule.Make[A](func() A {
-			return A{
-				Name: "hello",
-			}
+			return A{Name: "hello"}
 		})
 
 		mb := submodule.Make[*A](func() *A {
-			return &A{
-				Name: "world",
-			}
+			return &A{Name: "world"}
 		})
 
 		a := submodule.Make[string](func(p struct {
@@ -198,13 +150,8 @@ func TestModuleFunction(t *testing.T) {
 		}, ma, mb)
 
 		s, e := a.SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
-
-		if s != "hello" {
-			t.FailNow()
-		}
+		assert.NoError(t, e, "Resolve failed")
+		assert.Equal(t, "hello", s, "Unexpected result")
 	})
 
 	t.Run("group module", func(t *testing.T) {
@@ -213,28 +160,19 @@ func TestModuleFunction(t *testing.T) {
 		}
 
 		a := submodule.Make[A](func() A {
-			return A{
-				Name: "hello",
-			}
+			return A{Name: "hello"}
 		})
 
 		b := submodule.Make[A](func() A {
-			return A{
-				Name: "world",
-			}
+			return A{Name: "world"}
 		})
 
 		g := submodule.Group[A](a, b)
 		xg, e := g.SafeResolve()
 
-		if e != nil {
-			t.FailNow()
-		}
-
-		if xg[0].Name != "hello" || xg[1].Name != "world" {
-			fmt.Printf("%+v\n", xg)
-			t.FailNow()
-		}
+		assert.NoError(t, e, "Resolve failed")
+		assert.Equal(t, A{Name: "hello"}, xg[0], "Unexpected result")
+		assert.Equal(t, A{Name: "world"}, xg[1], "Unexpected result")
 	})
 
 	t.Run("matching interface", func(t *testing.T) {
@@ -251,9 +189,8 @@ func TestModuleFunction(t *testing.T) {
 		}, a)
 
 		xa, e := x.SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
+		assert.Nil(t, e, "Resolve failed")
+		assert.NotNil(t, xa, "Resolve failed")
 
 		xa.Hello()
 
@@ -262,9 +199,8 @@ func TestModuleFunction(t *testing.T) {
 		}, pa)
 
 		xb, e := b.SafeResolve()
-		if e != nil {
-			t.Fatalf("Resolve failed %+v", e)
-		}
+		assert.Nil(t, e, "Resolve failed")
+		assert.NotNil(t, xb, "Resolve failed")
 
 		xb.Goodbye()
 
@@ -280,14 +216,10 @@ func TestModuleFunction(t *testing.T) {
 		})
 
 		_, e := me.SafeResolve()
-		if e == nil {
-			t.FailNow()
-		}
+		assert.Error(t, e, "Resolve should return error")
 
 		_, e = ne.SafeResolve()
-		if e != nil {
-			t.FailNow()
-		}
+		assert.NoError(t, e, "Resolve should not return error")
 	})
 
 	t.Run("error should be treated well", func(t *testing.T) {
@@ -296,27 +228,23 @@ func TestModuleFunction(t *testing.T) {
 		})
 
 		_, e := ae.SafeResolve()
-		if e == nil {
-			t.FailNow()
-		}
+		assert.Error(t, e, "Resolve should return error")
+		assert.Contains(t, e.Error(), "error_0")
 
 		me := submodule.Make[int](func() (int, error) {
 			return 0, fmt.Errorf("error 2")
 		})
 
 		_, e = me.SafeResolve()
-		if e == nil {
-			t.FailNow()
-		}
+		assert.Error(t, e, "Resolve should return error")
 
 		ce := submodule.Make[int](func(i int) (int, error) {
 			return 0, fmt.Errorf("error 3")
 		}, ae)
 
 		_, e = ce.SafeResolve()
-		if e == nil || !strings.Contains(e.Error(), "error_0") {
-			t.FailNow()
-		}
+		assert.Error(t, e, "Resolve should return error")
+		assert.Contains(t, e.Error(), "error_0")
 	})
 
 	t.Run("can use isolated store to maintain value", func(t *testing.T) {
@@ -328,15 +256,11 @@ func TestModuleFunction(t *testing.T) {
 
 		xx := x.Resolve()
 		xx.Plus()
-		if xx.Count != 1 {
-			t.Fail()
-		}
+		assert.Equal(t, 1, xx.Count, "Count should be 1")
 
 		as := submodule.CreateStore()
 		xy := x.ResolveWith(as)
-		if xy.Count != 0 {
-			t.Fail()
-		}
+		assert.Equal(t, 0, xy.Count, "Count should be 0")
 	})
 }
 

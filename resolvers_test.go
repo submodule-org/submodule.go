@@ -59,4 +59,23 @@ func TestResolver(t *testing.T) {
 		assert.Equal(t, v.String, "hello")
 	})
 
+	t.Run("value can be replaced", func(t *testing.T) {
+		store := CreateStore()
+		store.InitValue(intValue, 200)
+
+		var v Embedded
+
+		_, e := resolveEmbedded(
+			store,
+			reflect.TypeOf(Embedded{}),
+			reflect.ValueOf(&v),
+			[]Retrievable{intValue, stringValue},
+		)
+
+		assert.Nil(t, e)
+
+		assert.Equal(t, v.Int, 200)
+		assert.Equal(t, v.String, "hello")
+	})
+
 }

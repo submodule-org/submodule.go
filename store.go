@@ -22,6 +22,7 @@ type Store interface {
 	init(g Retrievable) *value
 	InitValue(g Retrievable, v any)
 	InitError(g Retrievable, e error)
+	Dispose()
 }
 
 func (s *SubmoduleStore) init(g Retrievable) *value {
@@ -58,6 +59,15 @@ func (s *SubmoduleStore) InitError(g Retrievable, e error) {
 	c.initiated = true
 }
 
+func (s *SubmoduleStore) Dispose() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for k := range s.values {
+		delete(s.values, k)
+	}
+}
+
 func CreateStore() Store {
 	return &SubmoduleStore{
 		values: make(map[Retrievable]*value),
@@ -75,11 +85,30 @@ type legacyStore struct {
 	Store
 }
 
+var storeMapLock sync.Mutex
+var legacyStoreMap = make(map[context.Context]Store)
+
 func CreateLegacyStore(ctx context.Context) Store {
-	return &legacyStore{
-		ctx:   ctx,
-		Store: getStore(),
+	if s, ok := legacyStoreMap[ctx]; ok {
+		return s
 	}
+
+	store := &legacyStore{
+		ctx:   ctx,
+		Store: CreateStore(),
+	}
+
+	storeMapLock.Lock()
+	defer storeMapLock.Unlock()
+	legacyStoreMap[ctx] = store
+
+	return store
+}
+
+func DisposeLegacyStore(ctx context.Context) {
+	storeMapLock.Lock()
+	defer storeMapLock.Unlock()
+	delete(legacyStoreMap, ctx)
 }
 
 func (s *legacyStore) init(g Retrievable) *value {

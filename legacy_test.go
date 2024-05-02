@@ -24,15 +24,18 @@ func TestCreate(t *testing.T) {
 func TestSubmodule(t *testing.T) {
 
 	t.Run("Can call object in singleton mode", func(t *testing.T) {
+		ctx := context.Background()
+		defer submodule.DisposeLegacyStore(ctx)
+
 		count := 0
 		counter := submodule.Create(func(ctx context.Context) (x any, e error) {
 			count = count + 1
 			return
 		})
 
-		counter.Get(context.TODO())
-		counter.Get(context.TODO())
-		counter.Get(context.TODO())
+		counter.Get(ctx)
+		counter.Get(ctx)
+		counter.Get(ctx)
 
 		require.Equal(t, count, 1)
 	})
