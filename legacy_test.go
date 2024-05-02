@@ -140,10 +140,19 @@ func TestSubmodule(t *testing.T) {
 
 	})
 
-	t.Run("what if safe flow causes panic?", func(t *testing.T) {
+	t.Run("can replace value using context", func(t *testing.T) {
+		intValue := submodule.Make[int](func() int { return 100 })
+		ctx := context.Background()
 
+		ctx = context.WithValue(ctx, intValue, 300)
+		derivedIntValue := submodule.Make[int](func(v int) int {
+			return v + 100
+		}, intValue)
+
+		v, e := derivedIntValue.Get(ctx)
+		require.Nil(t, e)
+		require.Equal(t, 400, v)
 	})
-
 }
 
 func TestDeriveSingleton(t *testing.T) {

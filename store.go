@@ -112,8 +112,13 @@ func DisposeLegacyStore(ctx context.Context) {
 }
 
 func (s *legacyStore) init(g Retrievable) *value {
-	if c, ok := s.ctx.Value(g).(Retrievable); ok {
-		return s.Store.init(c)
+	if s.ctx.Value(g) != nil {
+		if c, ok := s.ctx.Value(g).(Retrievable); ok {
+			return s.Store.init(c)
+		}
+
+		s.InitValue(g, s.ctx.Value(g))
+		return s.Store.init(g)
 	}
 
 	return s.Store.init(g)
