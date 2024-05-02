@@ -12,12 +12,12 @@ type value struct {
 	initiated bool
 }
 
-type store struct {
+type Store struct {
 	mu     sync.Mutex
 	values map[Retrievable]*value
 }
 
-func (s *store) init(g Retrievable) *value {
+func (s *Store) init(g Retrievable) *value {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -32,7 +32,7 @@ func (s *store) init(g Retrievable) *value {
 	return v
 }
 
-func (s *store) InitValue(g Retrievable, v any) {
+func (s *Store) InitValue(g Retrievable, v any) {
 	c := s.init(g)
 
 	c.mu.Lock()
@@ -42,7 +42,7 @@ func (s *store) InitValue(g Retrievable, v any) {
 	c.initiated = true
 }
 
-func (s *store) InitError(g Retrievable, e error) {
+func (s *Store) InitError(g Retrievable, e error) {
 	c := s.init(g)
 
 	c.mu.Lock()
@@ -51,14 +51,14 @@ func (s *store) InitError(g Retrievable, e error) {
 	c.initiated = true
 }
 
-func CreateStore() *store {
-	return &store{
+func CreateStore() *Store {
+	return &Store{
 		values: make(map[Retrievable]*value),
 	}
 }
 
 var localStore = CreateStore()
 
-func getStore() *store {
+func getStore() *Store {
 	return localStore
 }

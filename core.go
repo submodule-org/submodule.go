@@ -12,7 +12,7 @@ type Get[V any] interface {
 
 type In struct{}
 type Self struct {
-	Store        *store
+	Store        *Store
 	Dependencies []Retrievable
 }
 
@@ -26,7 +26,7 @@ type s[T any] struct {
 }
 
 type Retrievable interface {
-	retrieve(*store) (any, error)
+	retrieve(*Store) (any, error)
 	canResolve(reflect.Type) bool
 }
 
@@ -36,15 +36,15 @@ type Submodule[T any] interface {
 	SafeResolve() (T, error)
 	Resolve() T
 
-	ResolveWith(store *store) T
-	SafeResolveWith(store *store) (T, error)
+	ResolveWith(store *Store) T
+	SafeResolveWith(store *Store) (T, error)
 }
 
 func (s *s[T]) SafeResolve() (t T, e error) {
 	return s.SafeResolveWith(nil)
 }
 
-func (s *s[T]) ResolveWith(as *store) T {
+func (s *s[T]) ResolveWith(as *Store) T {
 	t, e := s.SafeResolveWith(as)
 	if e != nil {
 		panic(e)
@@ -53,7 +53,7 @@ func (s *s[T]) ResolveWith(as *store) T {
 	return t
 }
 
-func (s *s[T]) SafeResolveWith(as *store) (t T, e error) {
+func (s *s[T]) SafeResolveWith(as *Store) (t T, e error) {
 	store := getStore()
 	if as != nil {
 		store = as
@@ -122,7 +122,7 @@ func (s *s[T]) Resolve() T {
 	return r
 }
 
-func (s *s[T]) retrieve(store *store) (any, error) {
+func (s *s[T]) retrieve(store *Store) (any, error) {
 	return s.SafeResolveWith(store)
 }
 
