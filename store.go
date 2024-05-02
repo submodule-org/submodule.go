@@ -1,6 +1,7 @@
 package submodule
 
 import (
+	"context"
 	"reflect"
 	"sync"
 )
@@ -12,12 +13,18 @@ type value struct {
 	initiated bool
 }
 
-type Store struct {
+type SubmoduleStore struct {
 	mu     sync.Mutex
 	values map[Retrievable]*value
 }
 
-func (s *Store) init(g Retrievable) *value {
+type Store interface {
+	init(g Retrievable) *value
+	InitValue(g Retrievable, v any)
+	InitError(g Retrievable, e error)
+}
+
+func (s *SubmoduleStore) init(g Retrievable) *value {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -32,7 +39,7 @@ func (s *Store) init(g Retrievable) *value {
 	return v
 }
 
-func (s *Store) InitValue(g Retrievable, v any) {
+func (s *SubmoduleStore) InitValue(g Retrievable, v any) {
 	c := s.init(g)
 
 	c.mu.Lock()
@@ -42,7 +49,7 @@ func (s *Store) InitValue(g Retrievable, v any) {
 	c.initiated = true
 }
 
-func (s *Store) InitError(g Retrievable, e error) {
+func (s *SubmoduleStore) InitError(g Retrievable, e error) {
 	c := s.init(g)
 
 	c.mu.Lock()
@@ -51,14 +58,34 @@ func (s *Store) InitError(g Retrievable, e error) {
 	c.initiated = true
 }
 
-func CreateStore() *Store {
-	return &Store{
+func CreateStore() Store {
+	return &SubmoduleStore{
 		values: make(map[Retrievable]*value),
 	}
 }
 
 var localStore = CreateStore()
 
-func getStore() *Store {
+func getStore() Store {
 	return localStore
+}
+
+type legacyStore struct {
+	ctx context.Context
+	Store
+}
+
+func CreateLegacyStore(ctx context.Context) Store {
+	return &legacyStore{
+		ctx:   ctx,
+		Store: getStore(),
+	}
+}
+
+func (s *legacyStore) init(g Retrievable) *value {
+	if c, ok := s.ctx.Value(g).(Retrievable); ok {
+		return s.Store.init(c)
+	}
+
+	return s.Store.init(g)
 }
