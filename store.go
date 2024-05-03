@@ -16,20 +16,40 @@ type value struct {
 type SubmoduleStore struct {
 	mu     sync.Mutex
 	values map[Retrievable]*value
+	parent Store
 }
 
 type Store interface {
 	init(g Retrievable) *value
+	has(g Retrievable) bool
 	InitValue(g Retrievable, v any)
 	InitError(g Retrievable, e error)
 	Dispose()
+}
+
+func (s *SubmoduleStore) has(g Retrievable) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, ok := s.values[g]
+	return ok
 }
 
 func (s *SubmoduleStore) init(g Retrievable) *value {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	v, ok := s.values[g]
+	var v *value
+	var ok bool
+
+	if s.parent != nil && s.parent.has(g) {
+		v = s.parent.init(g)
+		s.values[g] = v
+
+		return v
+	}
+
+	v, ok = s.values[g]
 	if !ok {
 		v = &value{
 			initiated: false,
@@ -68,16 +88,30 @@ func (s *SubmoduleStore) Dispose() {
 	}
 }
 
+func CreateNestedStore(store Store) Store {
+	return &SubmoduleStore{
+		values: make(map[Retrievable]*value),
+		parent: store,
+	}
+}
+
+func CreateInheritedStore() Store {
+	return &SubmoduleStore{
+		values: make(map[Retrievable]*value),
+		parent: globalStore,
+	}
+}
+
 func CreateStore() Store {
 	return &SubmoduleStore{
 		values: make(map[Retrievable]*value),
 	}
 }
 
-var localStore = CreateStore()
+var globalStore = CreateStore()
 
 func getStore() Store {
-	return localStore
+	return globalStore
 }
 
 type legacyStore struct {

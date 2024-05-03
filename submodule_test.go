@@ -262,6 +262,31 @@ func TestModuleFunction(t *testing.T) {
 		xy := x.ResolveWith(as)
 		assert.Equal(t, 0, xy.Count, "Count should be 0")
 	})
+
+	t.Run("store can be inherited", func(t *testing.T) {
+		x := submodule.Make[*Counter](func() *Counter {
+			return &Counter{
+				Count: 0,
+			}
+		})
+
+		xx := x.Resolve()
+		xx.Plus()
+		assert.Equal(t, 1, xx.Count, "Count should be 1")
+
+		isolatedStore := submodule.CreateStore()
+		xy := x.ResolveWith(isolatedStore)
+		assert.Equal(t, 0, xy.Count, "Count should be 0")
+
+		inheritedStore := submodule.CreateInheritedStore()
+		xy = x.ResolveWith(inheritedStore)
+		assert.Equal(t, 1, xy.Count)
+
+		nestedStore := submodule.CreateNestedStore(inheritedStore)
+		xy = x.ResolveWith(nestedStore)
+		assert.Equal(t, 1, xy.Count)
+
+	})
 }
 
 type Counter struct {

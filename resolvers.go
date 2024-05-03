@@ -52,7 +52,7 @@ func resolveEmbedded(as Store, t reflect.Type, v reflect.Value, dependencies []R
 
 		value, err := resolveType(store, f.Type, dependencies)
 		if err != nil {
-			return pv, err
+			return pv, fmt.Errorf("unable to resolve embedded %s\n%w", t.String(), err)
 		}
 
 		pv.Field(i).Set(value)
