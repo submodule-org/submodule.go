@@ -258,7 +258,7 @@ func TestModuleFunction(t *testing.T) {
 		xx.Plus()
 		assert.Equal(t, 1, xx.Count, "Count should be 1")
 
-		as := submodule.CreateStore()
+		as := submodule.CreateScope()
 		xy := x.ResolveWith(as)
 		assert.Equal(t, 0, xy.Count, "Count should be 0")
 	})
@@ -274,15 +274,15 @@ func TestModuleFunction(t *testing.T) {
 		xx.Plus()
 		assert.Equal(t, 1, xx.Count, "Count should be 1")
 
-		isolatedStore := submodule.CreateStore()
+		isolatedStore := submodule.CreateScope()
 		xy := x.ResolveWith(isolatedStore)
 		assert.Equal(t, 0, xy.Count, "Count should be 0")
 
-		inheritedStore := submodule.CreateInheritedStore()
+		inheritedStore := submodule.CreateScope(submodule.Inherit(true))
 		xy = x.ResolveWith(inheritedStore)
 		assert.Equal(t, 1, xy.Count)
 
-		nestedStore := submodule.CreateNestedStore(inheritedStore)
+		nestedStore := submodule.CreateScope(submodule.Inherit(true))
 		xy = x.ResolveWith(nestedStore)
 		assert.Equal(t, 1, xy.Count)
 

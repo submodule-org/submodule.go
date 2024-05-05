@@ -23,7 +23,7 @@ func isSelf(t reflect.Type) bool {
 	return t.AssignableTo(selfType)
 }
 
-func resolveEmbedded(as Store, t reflect.Type, v reflect.Value, dependencies []Retrievable) (reflect.Value, error) {
+func resolveEmbedded(as Scope, t reflect.Type, v reflect.Value, dependencies []Retrievable) (reflect.Value, error) {
 	var pt reflect.Type
 	var pv reflect.Value
 
@@ -65,7 +65,7 @@ func resolveEmbedded(as Store, t reflect.Type, v reflect.Value, dependencies []R
 	return pv, nil
 }
 
-func resolveType(store Store, t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
+func resolveType(store Scope, t reflect.Type, dependencies []Retrievable) (v reflect.Value, e error) {
 	if isInEmbedded(t) {
 		var sv reflect.Value
 		if t.Kind() == reflect.Pointer {

@@ -25,7 +25,7 @@ func TestSubmodule(t *testing.T) {
 
 	t.Run("Can call object in singleton mode", func(t *testing.T) {
 		ctx := context.Background()
-		defer submodule.DisposeLegacyStore(ctx)
+		defer submodule.DisposeLegacyScope(ctx)
 
 		count := 0
 		counter := submodule.Create(func(ctx context.Context) (x any, e error) {

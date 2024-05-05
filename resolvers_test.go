@@ -23,7 +23,7 @@ type Embedded struct {
 
 func TestResolver(t *testing.T) {
 	t.Run("can resolve type", func(t *testing.T) {
-		store := CreateStore()
+		store := CreateScope()
 		r, e := resolveType(store, reflect.TypeOf(0), []Retrievable{intValue})
 		assert.Nil(t, e)
 		assert.Equal(t, r.Interface(), 100)
@@ -42,7 +42,7 @@ func TestResolver(t *testing.T) {
 	})
 
 	t.Run("can resolve embedded type", func(t *testing.T) {
-		store := CreateStore()
+		store := CreateScope()
 
 		var v Embedded
 
@@ -60,7 +60,7 @@ func TestResolver(t *testing.T) {
 	})
 
 	t.Run("value can be replaced", func(t *testing.T) {
-		store := CreateStore()
+		store := CreateScope()
 		store.InitValue(intValue, 200)
 
 		var v Embedded

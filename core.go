@@ -18,7 +18,7 @@ type Get[V any] interface {
 
 type In struct{}
 type Self struct {
-	Store        Store
+	Store        Scope
 	Dependencies []Retrievable
 }
 
@@ -32,7 +32,7 @@ type s[T any] struct {
 }
 
 type Retrievable interface {
-	retrieve(Store) (any, error)
+	retrieve(Scope) (any, error)
 	canResolve(reflect.Type) bool
 }
 
@@ -42,15 +42,15 @@ type Submodule[T any] interface {
 	SafeResolve() (T, error)
 	Resolve() T
 
-	ResolveWith(store Store) T
-	SafeResolveWith(store Store) (T, error)
+	ResolveWith(store Scope) T
+	SafeResolveWith(store Scope) (T, error)
 }
 
 func (s *s[T]) SafeResolve() (t T, e error) {
 	return s.SafeResolveWith(nil)
 }
 
-func (s *s[T]) ResolveWith(as Store) T {
+func (s *s[T]) ResolveWith(as Scope) T {
 	t, e := s.SafeResolveWith(as)
 	if e != nil {
 		panic(e)
@@ -59,17 +59,16 @@ func (s *s[T]) ResolveWith(as Store) T {
 	return t
 }
 
-func (s *s[T]) SafeResolveWith(as Store) (t T, e error) {
-	store := getStore()
+func (s *s[T]) SafeResolveWith(as Scope) (t T, e error) {
+	scope := getStore()
 	if as != nil {
-		store = as
+		scope = as
 	}
 
-	v := store.init(s)
-	v.mu.Lock()
-	defer v.mu.Unlock()
-
-	if !v.initiated {
+	var v *value
+	if scope.has(s) {
+		v = scope.get(s)
+	} else {
 		inputType := reflect.TypeOf(s.input)
 
 		argsTypes := make([]reflect.Type, inputType.NumIn())
@@ -80,13 +79,13 @@ func (s *s[T]) SafeResolveWith(as Store) (t T, e error) {
 
 			if isSelf(argsTypes[i]) {
 				args[i] = reflect.ValueOf(Self{
-					Store:        store,
+					Store:        scope,
 					Dependencies: s.dependencies,
 				})
 				continue
 			}
 
-			v, error := resolveType(store, argsTypes[i], s.dependencies)
+			v, error := resolveType(scope, argsTypes[i], s.dependencies)
 			if error != nil {
 				return t, error
 			}
@@ -96,19 +95,17 @@ func (s *s[T]) SafeResolveWith(as Store) (t T, e error) {
 
 		result := reflect.ValueOf(s.input).Call(args)
 		if len(result) == 1 {
-			v.value = result[0]
+			v = scope.initValue(s, result[0])
 		} else {
-			v.value = result[0]
+			v = scope.initValue(s, result[0])
 			if !result[1].IsNil() {
-				v.e = result[1].Interface().(error)
+				v.e = result[1]
 			}
 		}
-
-		v.initiated = true
 	}
 
-	if v.e != nil {
-		return t, v.e
+	if v.e.IsValid() {
+		return t, v.e.Interface().(error)
 	}
 
 	if v.value.IsZero() {
@@ -128,8 +125,8 @@ func (s *s[T]) Resolve() T {
 	return r
 }
 
-func (s *s[T]) retrieve(store Store) (any, error) {
-	return s.SafeResolveWith(store)
+func (s *s[T]) retrieve(scope Scope) (any, error) {
+	return s.SafeResolveWith(scope)
 }
 
 func (s *s[T]) canResolve(key reflect.Type) bool {
