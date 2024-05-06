@@ -17,7 +17,7 @@ type scope struct {
 
 	parent     Scope
 	inherit    bool
-	middleware []ScopeMiddleware
+	middleware []Middleware
 }
 
 type Scope interface {
@@ -27,7 +27,9 @@ type Scope interface {
 	InitValue(g Retrievable, v any)
 	initError(g Retrievable, e reflect.Value) *value
 	InitError(g Retrievable, e error)
-	Dispose()
+	Dispose() error
+
+	AppendMiddleware(Middleware)
 }
 
 func (s *scope) has(g Retrievable) bool {
@@ -78,8 +80,15 @@ func (s *scope) initValue(g Retrievable, v reflect.Value) *value {
 		return s.get(g)
 	}
 
+	args := []reflect.Value{v}
+	for _, m := range s.middleware {
+		if m.hasOnScopeResolve && v.Type().AssignableTo(m.onScopeResolveType) {
+			args = m.onScopeResolve.Call(args)
+		}
+	}
+
 	value := &value{
-		value: v,
+		value: args[0],
 	}
 
 	s.mu.Lock()
@@ -114,23 +123,71 @@ func (s *scope) InitError(g Retrievable, e error) {
 	s.initError(g, reflect.ValueOf(e))
 }
 
-func (s *scope) Dispose() {
+func (s *scope) Dispose() error {
+	for _, m := range s.middleware {
+		if m.hasOnScopeEnd {
+			e := m.onScopeEnd()
+			if e != nil {
+				return e
+			}
+		}
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	for k := range s.values {
 		delete(s.values, k)
 	}
+
+	return nil
 }
 
-type ScopeMiddleware struct {
-	onScopeEnd func(Scope)
+func (s *scope) AppendMiddleware(m Middleware) {
+	s.middleware = append(s.middleware, m)
+}
+
+func AppendGlobalMiddleware(ms ...Middleware) {
+	for _, m := range ms {
+		globalScope.AppendMiddleware(m)
+	}
+}
+
+func DisposeGlobalScope() error {
+	return globalScope.Dispose()
+}
+
+type Middleware struct {
+	hasOnScopeResolve bool
+	hasOnScopeEnd     bool
+
+	onScopeResolveType reflect.Type
+	onScopeResolve     reflect.Value
+
+	onScopeEnd func() error
+}
+
+type MiddlewareFn func(Middleware) Middleware
+
+func WithScopeResolve[T any](fn func(T) T) Middleware {
+	return Middleware{
+		hasOnScopeResolve:  true,
+		onScopeResolveType: reflect.TypeOf(fn).In(0),
+		onScopeResolve:     reflect.ValueOf(fn),
+	}
+}
+
+func WithScopeEnd(fn func() error) Middleware {
+	return Middleware{
+		hasOnScopeEnd: true,
+		onScopeEnd:    fn,
+	}
 }
 
 type ScopeOpts struct {
 	inherit     bool
 	parent      Scope
-	middlewares []ScopeMiddleware
+	middlewares []Middleware
 }
 
 type ScopeOptsFn func(opts ScopeOpts) ScopeOpts
@@ -153,7 +210,7 @@ func WithParent(parent Scope) ScopeOptsFn {
 	}
 }
 
-func WithMiddlewares(middlewares ...ScopeMiddleware) ScopeOptsFn {
+func WithMiddlewares(middlewares ...Middleware) ScopeOptsFn {
 	return func(opts ScopeOpts) ScopeOpts {
 		opts.middlewares = middlewares
 		return opts

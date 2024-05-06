@@ -69,7 +69,7 @@ func Resolve[T any](t T, dependencies ...Retrievable) Submodule[T] {
 	}
 
 	return construct[T](func(self Self) T {
-		x, e := resolveEmbedded(self.Store, tt, reflect.ValueOf(t), self.Dependencies)
+		x, e := resolveEmbedded(self.Scope, tt, reflect.ValueOf(t), self.Dependencies)
 
 		if e != nil {
 			panic(e)
@@ -84,7 +84,7 @@ func Group[T any](s ...Retrievable) Submodule[[]T] {
 	return construct[[]T](func(self Self) []T {
 		var v []T
 		for _, submodule := range s {
-			t, e := submodule.retrieve(self.Store)
+			t, e := submodule.retrieve(self.Scope)
 			if e != nil {
 				panic(e)
 			}

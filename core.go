@@ -18,7 +18,7 @@ type Get[V any] interface {
 
 type In struct{}
 type Self struct {
-	Store        Scope
+	Scope        Scope
 	Dependencies []Retrievable
 }
 
@@ -79,7 +79,7 @@ func (s *s[T]) SafeResolveWith(as Scope) (t T, e error) {
 
 			if isSelf(argsTypes[i]) {
 				args[i] = reflect.ValueOf(Self{
-					Store:        scope,
+					Scope:        scope,
 					Dependencies: s.dependencies,
 				})
 				continue
