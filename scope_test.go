@@ -12,8 +12,14 @@ func TestScope(t *testing.T) {
 	var seed int
 	intValue := submodule.Make[int](func(self submodule.Self) int {
 		self.Scope.AppendMiddleware(submodule.WithScopeEnd(func() error {
+			fmt.Println("add 2 at the end of the day")
 			seed = seed + 2
 			return nil
+		}))
+
+		self.Scope.AppendMiddleware(submodule.WithScopeResolve(func(i any) any {
+			fmt.Println("catch everything")
+			return i
 		}))
 
 		return seed
