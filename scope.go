@@ -1,7 +1,6 @@
 package submodule
 
 import (
-	"context"
 	"reflect"
 	"sync"
 )
@@ -249,66 +248,4 @@ var globalScope = CreateScope(
 
 func getStore() Scope {
 	return globalScope
-}
-
-type legacyScope struct {
-	ctx context.Context
-	Scope
-}
-
-var storeMapLock sync.Mutex
-var legacyScopeMap = make(map[context.Context]Scope)
-
-func CreateLegacyStore(ctx context.Context) Scope {
-	if s, ok := legacyScopeMap[ctx]; ok {
-		return s
-	}
-
-	store := &legacyScope{
-		ctx:   ctx,
-		Scope: CreateScope(),
-	}
-
-	storeMapLock.Lock()
-	defer storeMapLock.Unlock()
-	legacyScopeMap[ctx] = store
-
-	return store
-}
-
-func DisposeLegacyScope(ctx context.Context) {
-	storeMapLock.Lock()
-	defer storeMapLock.Unlock()
-	delete(legacyScopeMap, ctx)
-}
-
-func (s *legacyScope) get(g Retrievable) *value {
-	if s.ctx.Value(g) != nil {
-		if c, ok := s.ctx.Value(g).(Retrievable); ok {
-			v, e := c.retrieve(s.Scope)
-			if e != nil {
-				return &value{
-					e: reflect.ValueOf(e),
-				}
-			}
-
-			return &value{
-				value: reflect.ValueOf(v),
-			}
-		}
-
-		return &value{
-			value: reflect.ValueOf(s.ctx.Value(g)),
-		}
-	}
-
-	return s.Scope.get(g)
-}
-
-func (s *legacyScope) has(g Retrievable) bool {
-	if s.Scope.has(g) {
-		return true
-	}
-
-	return s.ctx.Value(g) != nil
 }

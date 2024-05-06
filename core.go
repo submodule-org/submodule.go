@@ -1,31 +1,14 @@
 package submodule
 
 import (
-	"context"
 	"fmt"
 	"reflect"
 )
 
-// Old version of submodule requires context.Context to operate
-// The context acts as a temporary store so submodule can use that to
-// carry replacement
-//
-// To replace a submodule in chain, set the replacement submodule to the
-// original submodule ref
-type Get[V any] interface {
-	Get(context.Context) (V, error)
-}
-
-type In struct{}
-type Self struct {
-	Scope        Scope
-	Dependencies []Retrievable
-}
-
 var inType = reflect.TypeOf(In{})
 var selfType = reflect.TypeOf(Self{})
 
-type s[T any] struct {
+type submodule[T any] struct {
 	input        any
 	provideType  reflect.Type
 	dependencies []Retrievable
@@ -37,7 +20,6 @@ type Retrievable interface {
 }
 
 type Submodule[T any] interface {
-	Get[T]
 	Retrievable
 	SafeResolve() (T, error)
 	Resolve() T
@@ -46,11 +28,11 @@ type Submodule[T any] interface {
 	SafeResolveWith(store Scope) (T, error)
 }
 
-func (s *s[T]) SafeResolve() (t T, e error) {
+func (s *submodule[T]) SafeResolve() (t T, e error) {
 	return s.SafeResolveWith(nil)
 }
 
-func (s *s[T]) ResolveWith(as Scope) T {
+func (s *submodule[T]) ResolveWith(as Scope) T {
 	t, e := s.SafeResolveWith(as)
 	if e != nil {
 		panic(e)
@@ -59,7 +41,7 @@ func (s *s[T]) ResolveWith(as Scope) T {
 	return t
 }
 
-func (s *s[T]) SafeResolveWith(as Scope) (t T, e error) {
+func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
 	scope := getStore()
 	if as != nil {
 		scope = as
@@ -115,7 +97,7 @@ func (s *s[T]) SafeResolveWith(as Scope) (t T, e error) {
 	return v.value.Interface().(T), nil
 }
 
-func (s *s[T]) Resolve() T {
+func (s *submodule[T]) Resolve() T {
 	r, e := s.SafeResolve()
 
 	if e != nil {
@@ -125,17 +107,12 @@ func (s *s[T]) Resolve() T {
 	return r
 }
 
-func (s *s[T]) retrieve(scope Scope) (any, error) {
+func (s *submodule[T]) retrieve(scope Scope) (any, error) {
 	return s.SafeResolveWith(scope)
 }
 
-func (s *s[T]) canResolve(key reflect.Type) bool {
+func (s *submodule[T]) canResolve(key reflect.Type) bool {
 	return s.provideType.AssignableTo(key)
-}
-
-func (s *s[T]) Get(ctx context.Context) (T, error) {
-	store := CreateLegacyStore(ctx)
-	return s.SafeResolveWith(store)
 }
 
 func validateInput(input any, isProvider bool) error {
@@ -164,37 +141,6 @@ func validateInput(input any, isProvider bool) error {
 
 		if inputType.NumOut() == 1 && !inputType.Out(0).AssignableTo(reflect.TypeOf((*error)(nil)).Elem()) {
 			return fmt.Errorf("run fn can only return none or error %v", inputType.String())
-		}
-	}
-
-	return nil
-}
-
-func run(input any, dependencies ...Retrievable) error {
-	if err := validateInput(input, false); err != nil {
-		return err
-	}
-
-	store := getStore()
-
-	runType := reflect.TypeOf(input)
-	args := make([]reflect.Value, 0, runType.NumIn())
-
-	for i := 0; i < runType.NumIn(); i++ {
-		v, e := resolveType(store, runType.In(i), dependencies)
-		if e != nil {
-			fmt.Printf("Resolve failed %+v\n", e)
-			return e
-		}
-
-		args = append(args, v)
-	}
-
-	r := reflect.ValueOf(input).Call(args)
-
-	if len(r) == 1 {
-		if !r[0].IsNil() {
-			return r[0].Interface().(error)
 		}
 	}
 
@@ -295,7 +241,7 @@ func construct[T any](
 		}
 	}
 
-	return &s[T]{
+	return &submodule[T]{
 		input:        input,
 		provideType:  provideType,
 		dependencies: dependencies,

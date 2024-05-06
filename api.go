@@ -95,3 +95,10 @@ func Group[T any](s ...Retrievable) Submodule[[]T] {
 		return v
 	})
 }
+
+type In struct{}
+
+type Self struct {
+	Scope        Scope
+	Dependencies []Retrievable
+}
