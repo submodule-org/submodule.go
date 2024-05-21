@@ -6,10 +6,13 @@ import (
 )
 
 func Test_Redis(t *testing.T) {
-	var redisSub = RedisSub.Resolve().WithDefault()
-	r, err := redisSub.Connect(context.Background())
+	redisSub, err := RedisSub.Resolve().WithDefault(context.Background())
 	if err != nil {
 		panic(err)
 	}
-	defer r.Close()
+	_, err = redisSub.Connect(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	redisSub.Close(context.Background())
 }
