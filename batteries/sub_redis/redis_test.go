@@ -1,4 +1,4 @@
-package redis_test
+package sub_redis_test
 
 import (
 	"context"
@@ -7,17 +7,17 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/batteries/env"
-	"github.com/submodule-org/submodule.go/batteries/redis"
+	"github.com/submodule-org/submodule.go/batteries/sub_env"
+	"github.com/submodule-org/submodule.go/batteries/sub_redis"
 )
 
 func TestRedis(t *testing.T) {
 
 	t.Run("test redis", func(t *testing.T) {
 		s := submodule.CreateScope()
-		s.InitValue(env.Mod, env.Test)
+		s.InitValue(sub_env.Mod, sub_env.Prod)
 
-		client, e := redis.Mod.SafeResolveWith(s)
+		client, e := sub_redis.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
 
 		ctx := context.TODO()

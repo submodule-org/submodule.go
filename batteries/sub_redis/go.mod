@@ -1,17 +1,17 @@
-module github.com/submodule-org/submodule.go/batteries/redis
+module github.com/submodule-org/submodule.go/batteries/sub_redis
 
 go 1.22.2
 
 replace (
 	github.com/submodule-org/submodule.go => ../..
-	github.com/submodule-org/submodule.go/batteries/env => ../env
+	github.com/submodule-org/submodule.go/batteries/sub_env => ../sub_env
 )
 
 require (
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/stretchr/testify v1.9.0
 	github.com/submodule-org/submodule.go v1.7.0
-	github.com/submodule-org/submodule.go/batteries/env v0.0.0-00010101000000-000000000000
+	github.com/submodule-org/submodule.go/batteries/sub_env v0.0.0-00010101000000-000000000000
 	github.com/testcontainers/testcontainers-go v0.31.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.31.0
 )

@@ -42,7 +42,7 @@ func (s *submodule[T]) ResolveWith(as Scope) T {
 }
 
 func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
-	scope := getStore()
+	scope := GetStore()
 	if as != nil {
 		scope = as
 	}

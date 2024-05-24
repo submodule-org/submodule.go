@@ -22,13 +22,15 @@ type scope struct {
 type Scope interface {
 	get(g Retrievable) *value
 	has(g Retrievable) bool
+
 	initValue(g Retrievable, v reflect.Value) *value
 	InitValue(g Retrievable, v any)
 	initError(g Retrievable, e reflect.Value) *value
 	InitError(g Retrievable, e error)
-	Dispose() error
 
+	Dispose() error
 	AppendMiddleware(Middleware)
+	Apply(Submodule[Middleware])
 }
 
 func (s *scope) has(g Retrievable) bool {
@@ -122,6 +124,12 @@ func (s *scope) InitError(g Retrievable, e error) {
 	s.initError(g, reflect.ValueOf(e))
 }
 
+func (s *scope) Apply(submodule Submodule[Middleware]) {
+	m := submodule.ResolveWith(s)
+
+	s.AppendMiddleware(m)
+}
+
 func (s *scope) Dispose() error {
 	for _, m := range s.middleware {
 		if m.hasOnScopeEnd {
@@ -154,6 +162,11 @@ func AppendGlobalMiddleware(ms ...Middleware) {
 
 func DisposeGlobalScope() error {
 	return globalScope.Dispose()
+}
+
+func Apply(s Submodule[Middleware]) {
+	m := s.Resolve()
+	globalScope.AppendMiddleware(m)
 }
 
 type Middleware struct {
@@ -246,6 +259,6 @@ var globalScope = CreateScope(
 	WithParent(nil),
 )
 
-func getStore() Scope {
+func GetStore() Scope {
 	return globalScope
 }

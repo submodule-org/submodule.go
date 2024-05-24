@@ -98,6 +98,19 @@ func Group[T any](s ...Retrievable) Submodule[[]T] {
 
 type In struct{}
 
+func Find[T any](i []T, is Scope) []T {
+	t := reflect.TypeOf(i).Elem()
+	s := is.(*scope)
+
+	for _, m := range s.values {
+		if m.value.Type().AssignableTo(t) {
+			i = append(i, m.value.Interface().(T))
+		}
+	}
+
+	return i
+}
+
 type Self struct {
 	Scope        Scope
 	Dependencies []Retrievable

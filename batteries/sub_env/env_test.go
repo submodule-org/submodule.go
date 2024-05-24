@@ -1,4 +1,4 @@
-package env_test
+package sub_env_test
 
 import (
 	"os"
@@ -6,19 +6,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/batteries/env"
+	"github.com/submodule-org/submodule.go/batteries/sub_env"
 )
 
 func TestEnv(t *testing.T) {
 	t.Run("default mode is dev", func(t *testing.T) {
-		assert.Equal(t, env.Dev, env.LoadFromEnv())
+		assert.Equal(t, sub_env.Dev, sub_env.LoadFromEnv())
 	})
 
 	t.Run("resolving env works", func(t *testing.T) {
 		s := submodule.CreateScope()
-		_e, e := env.Mod.SafeResolveWith(s)
+		_e, e := sub_env.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
-		assert.Equal(t, env.Dev, _e)
+		assert.Equal(t, sub_env.Dev, _e)
 	})
 
 	t.Run("can detect env from env var", func(t *testing.T) {
@@ -28,9 +28,9 @@ func TestEnv(t *testing.T) {
 		defer os.Setenv("APP_ENV", oev)
 
 		os.Setenv("APP_ENV", "test")
-		_e, e := env.Mod.SafeResolveWith(s)
+		_e, e := sub_env.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
-		assert.Equal(t, env.Test, _e)
+		assert.Equal(t, sub_env.Test, _e)
 	})
 
 	t.Run("invalid will return to dev", func(t *testing.T) {
@@ -40,42 +40,42 @@ func TestEnv(t *testing.T) {
 		defer os.Setenv("APP_ENV", oev)
 
 		os.Setenv("APP_ENV", "something something")
-		_e, e := env.Mod.SafeResolveWith(s)
+		_e, e := sub_env.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
-		assert.Equal(t, env.Dev, _e)
+		assert.Equal(t, sub_env.Dev, _e)
 	})
 
 	t.Run("can change env flag", func(t *testing.T) {
 		s := submodule.CreateScope()
 
-		ok := env.EnvKey
+		ok := sub_env.EnvKey
 
 		os.Setenv("RANDOM_FLAG", "test")
 
-		env.EnvKey = "RANDOM_FLAG"
+		sub_env.EnvKey = "RANDOM_FLAG"
 		defer func() {
-			env.EnvKey = ok
+			sub_env.EnvKey = ok
 		}()
 
-		_e, e := env.Mod.SafeResolveWith(s)
+		_e, e := sub_env.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
-		assert.Equal(t, env.Test, _e)
+		assert.Equal(t, sub_env.Test, _e)
 	})
 
 	t.Run("can change load stratgegy", func(t *testing.T) {
 		s := submodule.CreateScope()
 
-		ols := env.DefaultStrategy
-		env.DefaultStrategy = func() env.Env {
-			return env.Prod
+		ols := sub_env.DefaultStrategy
+		sub_env.DefaultStrategy = func() sub_env.Env {
+			return sub_env.Prod
 		}
 
 		defer func() {
-			env.DefaultStrategy = ols
+			sub_env.DefaultStrategy = ols
 		}()
 
-		_e, e := env.Mod.SafeResolveWith(s)
+		_e, e := sub_env.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
-		assert.Equal(t, env.Prod, _e)
+		assert.Equal(t, sub_env.Prod, _e)
 	})
 }

@@ -1,4 +1,4 @@
-module github.com/submodule-org/submodule.go/batteries/env
+module github.com/submodule-org/submodule.go/batteries/sub_env
 
 go 1.22.2
 

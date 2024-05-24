@@ -27,7 +27,7 @@ func resolveEmbedded(as Scope, t reflect.Type, v reflect.Value, dependencies []R
 	var pt reflect.Type
 	var pv reflect.Value
 
-	store := getStore()
+	store := GetStore()
 	if as != nil {
 		store = as
 	}
@@ -42,7 +42,7 @@ func resolveEmbedded(as Scope, t reflect.Type, v reflect.Value, dependencies []R
 
 	for i := 0; i < pt.NumField(); i++ {
 		f := pt.Field(i)
-		if f.Type == inType {
+		if f.Anonymous {
 			continue
 		}
 
