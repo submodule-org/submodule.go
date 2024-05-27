@@ -1,10 +1,10 @@
-module github.com/submodule-org/submodule.go/batteries/sub_cmd
+module github.com/submodule-org/submodule.go/meta/mcmd
 
 go 1.22.2
 
 replace (
 	github.com/submodule-org/submodule.go => ../..
-	github.com/submodule-org/submodule.go/batteries/sub_env => ../sub_env
+	github.com/submodule-org/submodule.go/meta/menv => ../menv
 )
 
 require (

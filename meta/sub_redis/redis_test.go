@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/batteries/sub_env"
-	"github.com/submodule-org/submodule.go/batteries/sub_redis"
+	"github.com/submodule-org/submodule.go/meta/menv"
+	"github.com/submodule-org/submodule.go/meta/mredis"
 )
 
 func TestRedis(t *testing.T) {

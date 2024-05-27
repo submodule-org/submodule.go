@@ -6,7 +6,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/batteries/sub_env"
+	"github.com/submodule-org/submodule.go/meta/menv"
 	"github.com/testcontainers/testcontainers-go"
 	redisContainer "github.com/testcontainers/testcontainers-go/modules/redis"
 )

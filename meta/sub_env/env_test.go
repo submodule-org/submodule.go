@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/batteries/sub_env"
+	"github.com/submodule-org/submodule.go/meta/menv"
 )
 
 func TestEnv(t *testing.T) {
