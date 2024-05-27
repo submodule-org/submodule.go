@@ -67,9 +67,9 @@ func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
 				continue
 			}
 
-			v, error := resolveType(scope, argsTypes[i], s.dependencies)
-			if error != nil {
-				return t, error
+			v, err := resolveType(scope, argsTypes[i], s.dependencies)
+			if err != nil {
+				return t, err
 			}
 
 			args[i] = v

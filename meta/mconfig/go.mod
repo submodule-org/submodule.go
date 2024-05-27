@@ -1,17 +1,13 @@
-module github.com/submodule-org/submodule.go/meta/mhttp
+module github.com/submodule-org/submodule.go/meta/mconfig
 
 go 1.22.2
 
-replace (
-	github.com/submodule-org/submodule.go => ../..
-	github.com/submodule-org/submodule.go/meta/mconfig => ../mconfig
-	github.com/submodule-org/submodule.go/meta/menv => ../menv
-)
+replace github.com/submodule-org/submodule.go => ../..
 
 require (
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/submodule-org/submodule.go v1.7.0
-	github.com/submodule-org/submodule.go/meta/mconfig v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -28,7 +24,6 @@ require (
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.18.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect

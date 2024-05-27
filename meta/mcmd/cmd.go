@@ -10,17 +10,17 @@ import (
 
 type Cmd = *cli.Command
 
-type CanHandleCmd interface {
-	GetCmd() *cli.Command
+type IntegrateWithUrfave interface {
+	AdaptToCLI(app *cli.App)
 }
 
 var Mod = submodule.Make[*cli.App](func(self submodule.Self) *cli.App {
 	root := &cli.App{}
 
-	cmds := submodule.Find([]CanHandleCmd{}, self.Scope)
+	cmds := submodule.Find([]IntegrateWithUrfave{}, self.Scope)
 
 	for _, cmd := range cmds {
-		root.Commands = append(root.Commands, cmd.GetCmd())
+		cmd.AdaptToCLI(root)
 	}
 
 	return root
