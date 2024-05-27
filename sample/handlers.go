@@ -1,9 +1,10 @@
-package main
+package sample
 
 import (
 	"net/http"
 
 	"github.com/submodule-org/submodule.go"
+	"github.com/urfave/cli/v2"
 )
 
 type emptyHandler struct {
@@ -23,4 +24,15 @@ func (h *emptyHandler) AdaptToHTTPHandler(m *http.ServeMux) {
 	})
 }
 
-var emptyHandlerRoute = submodule.Resolve(&emptyHandler{}, LoggerMod, DbMod)
+func (h *emptyHandler) AdaptToCLI(app *cli.App) {
+	app.Commands = append(app.Commands, &cli.Command{
+		Name:  "empty",
+		Usage: "empty handler",
+		Action: func(c *cli.Context) error {
+			h.Handle()
+			return nil
+		},
+	})
+}
+
+var EmptyHandlerRoute = submodule.Resolve(&emptyHandler{}, LoggerMod, DbMod)

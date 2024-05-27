@@ -1,68 +1,75 @@
 package mhttp
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/submodule-org/submodule.go"
 	"github.com/submodule-org/submodule.go/meta/mconfig"
 )
 
+type rawServerConfig struct {
+	Addr              string
+	KeepAlive         bool
+	ReadTimeout       string
+	ReadHeaderTimeout string
+	WriteTimeout      string
+	IdleTimeout       string
+	MaxHeaderBytes    string
+}
+
+var rawConfigMod = mconfig.CreateConfigWithPath("http", &rawServerConfig{
+	Addr:              ":8080",
+	KeepAlive:         true,
+	ReadTimeout:       "5s",
+	ReadHeaderTimeout: "5s",
+	WriteTimeout:      "5s",
+	IdleTimeout:       "60s",
+	MaxHeaderBytes:    "1M",
+})
+
 type serverConfig struct {
-	ConfigPath string
-	Addr       string
-
-	DisableGeneralOptionsHandler bool
-	TLSConfig                    *tls.Config
-	ReadTimeout                  time.Duration
-
+	Addr              string
+	KeepAlive         bool
+	ReadTimeout       time.Duration
 	ReadHeaderTimeout time.Duration
 	WriteTimeout      time.Duration
 	IdleTimeout       time.Duration
-	MaxHeaderBytes    int
+	MaxHeaderBytes    uint64
 }
 
-var defaultServerConfig = serverConfig{
-	ConfigPath:   "http",
-	Addr:         ":8080",
-	ReadTimeout:  5 * time.Second,
-	WriteTimeout: 10 * time.Second,
-}
+var configMod = submodule.Make[*serverConfig](func(config *rawServerConfig) (s *serverConfig, e error) {
+	s = &serverConfig{}
 
-var configInUse = defaultServerConfig
+	s.ReadTimeout, e = time.ParseDuration(config.ReadTimeout)
+	if e != nil {
+		return nil, e
+	}
 
-func UseDefault() {
-	configInUse = defaultServerConfig
-}
+	s.ReadHeaderTimeout, e = time.ParseDuration(config.ReadHeaderTimeout)
+	if e != nil {
+		return nil, e
+	}
 
-func SetAddr(addr string) {
-	configInUse.Addr = addr
-}
+	s.WriteTimeout, e = time.ParseDuration(config.WriteTimeout)
+	if e != nil {
+		return nil, e
+	}
 
-func SetConfigPath(path string) {
-	configInUse.ConfigPath = path
-}
+	s.IdleTimeout, e = time.ParseDuration(config.IdleTimeout)
+	if e != nil {
+		return nil, e
+	}
 
-type IntegrateWithHttpServer interface {
-	AdaptToHTTPHandler(rootMux *http.ServeMux)
-}
-
-var configMod = submodule.Make[*serverConfig](func(loader *mconfig.ConfigLoader) (*serverConfig, error) {
-	s := &serverConfig{}
-	e := loader.LoadPath(configInUse.ConfigPath, s)
-
+	s.MaxHeaderBytes, e = humanize.ParseBytes(config.MaxHeaderBytes)
 	if e != nil {
 		return nil, e
 	}
 
 	return s, nil
-}, mconfig.LoaderMod)
-
-func init() {
-	mconfig.AppendDefault("http", defaultServerConfig)
-}
+}, rawConfigMod)
 
 var ServerMod = submodule.Make[*http.Server](func(self submodule.Self, config *serverConfig) *http.Server {
 	muxes := submodule.Find([]IntegrateWithHttpServer{}, self.Scope)
@@ -77,7 +84,7 @@ var ServerMod = submodule.Make[*http.Server](func(self submodule.Self, config *s
 
 	s := &http.Server{Handler: rootMux}
 
-	s.SetKeepAlivesEnabled(true)
+	s.SetKeepAlivesEnabled(config.KeepAlive)
 	s.Addr = config.Addr
 	s.ReadTimeout = config.ReadTimeout
 	s.WriteTimeout = config.WriteTimeout

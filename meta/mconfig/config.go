@@ -65,7 +65,6 @@ var viperMod = submodule.Make[*viper.Viper](func() (*viper.Viper, error) {
 
 	replacer := strings.NewReplacer(`_`, `.`)
 
-	v.Debug()
 	v.SetEnvKeyReplacer(replacer)
 	v.SetEnvPrefix(inuse.envPrefix)
 	v.SetConfigName(inuse.configName)

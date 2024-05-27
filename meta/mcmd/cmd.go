@@ -1,18 +1,13 @@
-package sub_cmd
+package mcmd
 
 import (
 	"os"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/submodule-org/submodule.go"
+	"github.com/urfave/cli/v2"
 )
 
 type Cmd = *cli.Command
-
-type IntegrateWithUrfave interface {
-	AdaptToCLI(app *cli.App)
-}
 
 var Mod = submodule.Make[*cli.App](func(self submodule.Self) *cli.App {
 	root := &cli.App{}
