@@ -1,4 +1,4 @@
-package sub_env
+package menv
 
 import (
 	"os"

@@ -1,4 +1,4 @@
-package sub_redis
+package mredis
 
 import (
 	"context"
@@ -22,15 +22,15 @@ var DefaultOptions = &redis.Options{
 
 var reusableContainerName = "dev-redis"
 
-var containerMod = submodule.Make[*redisContainer.RedisContainer](func(self submodule.Self, sub_env sub_env.Env) *redisContainer.RedisContainer {
-	if sub_env.IsProd() {
+var containerMod = submodule.Make[*redisContainer.RedisContainer](func(self submodule.Self, menv menv.Env) *redisContainer.RedisContainer {
+	if menv.IsProd() {
 		return nil
 	}
 	ctx := context.Background()
 	redisContainer, err := redisContainer.RunContainer(ctx,
 		testcontainers.WithImage("docker.io/redis:7"),
 		testcontainers.CustomizeRequestOption(func(req *testcontainers.GenericContainerRequest) error {
-			if sub_env.IsDev() {
+			if menv.IsDev() {
 				req.ContainerRequest.Name = reusableContainerName
 				req.Reuse = true
 			}
@@ -46,17 +46,17 @@ var containerMod = submodule.Make[*redisContainer.RedisContainer](func(self subm
 		panic(err)
 	}
 
-	if sub_env.IsTest() {
+	if menv.IsTest() {
 		self.Scope.AppendMiddleware(submodule.WithScopeEnd(func() error {
 			return redisContainer.Terminate(ctx)
 		}))
 	}
 
 	return redisContainer
-}, sub_env.Mod)
+}, menv.Mod)
 
-var configMod = submodule.Make[*Options](func(self submodule.Self, sub_env sub_env.Env, container *redisContainer.RedisContainer) (*Options, error) {
-	if sub_env.IsNotProd() {
+var configMod = submodule.Make[*Options](func(self submodule.Self, menv menv.Env, container *redisContainer.RedisContainer) (*Options, error) {
+	if menv.IsNotProd() {
 		ctx := context.Background()
 		cs, e := container.ConnectionString(ctx)
 		if e != nil {
@@ -67,7 +67,7 @@ var configMod = submodule.Make[*Options](func(self submodule.Self, sub_env sub_e
 	}
 
 	return DefaultOptions, nil
-}, sub_env.Mod, containerMod)
+}, menv.Mod, containerMod)
 
 var Mod = submodule.Make[*Client](func(self submodule.Self, config *Options) (*Client, error) {
 	client := redis.NewClient(config)

@@ -1,4 +1,4 @@
-package sub_redis_test
+package mredis_test
 
 import (
 	"context"
@@ -15,9 +15,9 @@ func TestRedis(t *testing.T) {
 
 	t.Run("test redis", func(t *testing.T) {
 		s := submodule.CreateScope()
-		s.InitValue(sub_env.Mod, sub_env.Prod)
+		s.InitValue(menv.Mod, menv.Prod)
 
-		client, e := sub_redis.Mod.SafeResolveWith(s)
+		client, e := mredis.Mod.SafeResolveWith(s)
 		assert.Nil(t, e)
 
 		ctx := context.TODO()
