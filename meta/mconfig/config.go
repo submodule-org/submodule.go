@@ -1,15 +1,21 @@
 package mconfig
 
 import (
+	"os"
+	"strings"
+
 	"github.com/spf13/viper"
 	"github.com/submodule-org/submodule.go"
 )
+
+type ConfigModifier func(*viper.Viper)
 
 type config struct {
 	configName  string
 	configType  string
 	configPaths []string
 	envPrefix   string
+	modifiers   []ConfigModifier
 }
 
 var defaults = config{
@@ -47,20 +53,36 @@ func SetDefaults() {
 	inuse = defaults
 }
 
+func AppendDefault(k string, v any) {
+	inuse.modifiers = append(inuse.modifiers, func(c *viper.Viper) {
+		c.SetDefault(k, v)
+	})
+}
+
 var viperMod = submodule.Make[*viper.Viper](func() (*viper.Viper, error) {
 	var e error
 	v := viper.New()
 
-	v.SetEnvPrefix(inuse.envPrefix)
+	replacer := strings.NewReplacer(`_`, `.`)
 
+	v.Debug()
+	v.SetEnvKeyReplacer(replacer)
+	v.SetEnvPrefix(inuse.envPrefix)
 	v.SetConfigName(inuse.configName)
 	v.SetConfigType(inuse.configType)
+
+	for _, m := range inuse.modifiers {
+		m(v)
+	}
 
 	for _, p := range inuse.configPaths {
 		v.AddConfigPath(p)
 	}
 
-	v.AutomaticEnv()
+	for _, s := range os.Environ() {
+		a := strings.Split(s, "=")
+		v.Set(replacer.Replace(a[0]), a[1])
+	}
 
 	if e := v.ReadInConfig(); e != nil {
 		if _, ok := e.(viper.ConfigFileNotFoundError); ok {
@@ -81,7 +103,17 @@ func (c *ConfigLoader) Load(t any) error {
 	return c.viper.Unmarshal(&t)
 }
 
+func (c *ConfigLoader) LoadWithDefault(t any) error {
+	return c.viper.Unmarshal(&t)
+}
+
 func (c *ConfigLoader) LoadPath(p string, t any) error {
+	return c.viper.UnmarshalKey(p, &t)
+}
+
+func (c *ConfigLoader) LoadPathWithDefault(p string, d any, t any) error {
+	c.viper.SetDefault(p, d)
+
 	return c.viper.UnmarshalKey(p, &t)
 }
 

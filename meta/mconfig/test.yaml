@@ -3,3 +3,9 @@ host: localhost
 credential:
   username: "admin"
   password: ""
+
+
+redis:
+  url: localhost:6379
+  password: ""
+  db: 0

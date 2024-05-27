@@ -50,19 +50,24 @@ type IntegrateWithHttpServer interface {
 }
 
 var configMod = submodule.Make[*serverConfig](func(loader *mconfig.ConfigLoader) (*serverConfig, error) {
-	e := loader.LoadPath(configInUse.ConfigPath, &configInUse)
+	s := &serverConfig{}
+	e := loader.LoadPath(configInUse.ConfigPath, s)
 
 	if e != nil {
 		return nil, e
 	}
 
-	return &configInUse, nil
+	return s, nil
 }, mconfig.LoaderMod)
+
+func init() {
+	mconfig.AppendDefault("http", defaultServerConfig)
+}
 
 var ServerMod = submodule.Make[*http.Server](func(self submodule.Self, config *serverConfig) *http.Server {
 	muxes := submodule.Find([]IntegrateWithHttpServer{}, self.Scope)
-	fmt.Printf("found %d handlers", len(muxes))
-	fmt.Printf("config %+v", config)
+	fmt.Printf("found %d handlers\n", len(muxes))
+	fmt.Printf("config %+vv\n", config)
 
 	rootMux := http.NewServeMux()
 
