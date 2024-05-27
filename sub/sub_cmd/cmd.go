@@ -1,25 +1,26 @@
 package sub_cmd
 
 import (
-	"github.com/spf13/cobra"
+	"os"
+
+	"github.com/urfave/cli/v2"
+
 	"github.com/submodule-org/submodule.go"
 )
 
-type Command = cobra.Command
+type Cmd = *cli.Command
 
-type Cmd interface {
-	GetCommand() []*Command
+type CanHandleCmd interface {
+	GetCmd() *cli.Command
 }
 
-var Mod = submodule.Make[*cobra.Command](func(self submodule.Self) *cobra.Command {
-	root := &cobra.Command{
-		Use: "app",
-	}
+var Mod = submodule.Make[*cli.App](func(self submodule.Self) *cli.App {
+	root := &cli.App{}
 
-	cmds := submodule.Find([]Cmd{}, self.Scope)
+	cmds := submodule.Find([]CanHandleCmd{}, self.Scope)
 
 	for _, cmd := range cmds {
-		root.AddCommand(cmd.GetCommand()...)
+		root.Commands = append(root.Commands, cmd.GetCmd())
 	}
 
 	return root
@@ -31,7 +32,7 @@ func Start() error {
 		return e
 	}
 
-	return root.Execute()
+	return root.Run(os.Args)
 }
 
 func StartInScope(scope submodule.Scope) error {
@@ -40,5 +41,5 @@ func StartInScope(scope submodule.Scope) error {
 		return e
 	}
 
-	return root.Execute()
+	return root.Run(os.Args)
 }

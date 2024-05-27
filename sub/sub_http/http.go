@@ -6,18 +6,23 @@ import (
 	"github.com/submodule-org/submodule.go"
 )
 
-type GetMux interface {
-	GetMux() *http.ServeMux
-	GetMuxPath() string
+type Handler struct {
+	Path    string
+	Handler http.Handler
+}
+
+type CanHandleHTTP interface {
+	GetHTTPHandler() Handler
 }
 
 var ServerMod = submodule.Make[http.Server](func(self submodule.Self) http.Server {
-	muxes := submodule.Find([]GetMux{}, self.Scope)
+	muxes := submodule.Find([]CanHandleHTTP{}, self.Scope)
 
 	rootMux := http.NewServeMux()
 
 	for _, m := range muxes {
-		rootMux.Handle(m.GetMuxPath(), m.GetMux())
+		mux := m.GetHTTPHandler()
+		rootMux.Handle(mux.Path, mux.Handler)
 	}
 
 	return http.Server{
@@ -25,3 +30,12 @@ var ServerMod = submodule.Make[http.Server](func(self submodule.Self) http.Serve
 		Handler: rootMux,
 	}
 })
+
+func Start() error {
+	server, e := ServerMod.SafeResolve()
+	if e != nil {
+		return e
+	}
+
+	return server.ListenAndServe()
+}
