@@ -120,3 +120,15 @@ func (c *ConfigLoader) LoadPathWithDefault(p string, d any, t any) error {
 var LoaderMod = submodule.Make[*ConfigLoader](func(viper *viper.Viper) *ConfigLoader {
 	return &ConfigLoader{viper: viper}
 }, viperMod)
+
+func CreateConfig[T any](def T) submodule.Submodule[T] {
+	return CreateConfigWithPath("", def)
+}
+
+func CreateConfigWithPath[T any](path string, def T) submodule.Submodule[T] {
+	AppendDefault(path, def)
+	return submodule.Make[T](func(loader *ConfigLoader) T {
+		loader.Load(def)
+		return def
+	}, LoaderMod)
+}

@@ -1,13 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"github.com/submodule-org/submodule.go/meta/mhttp"
+)
 
 func main() {
-	s, e := ServerMod.SafeResolve()
-	if e != nil {
-		fmt.Printf("Resolve failed %+v\n", e)
-	}
+	emptyHandlerRoute.Resolve()
 
-	s.Start()
-
+	mhttp.Start()
+	defer mhttp.Stop()
 }

@@ -10,7 +10,7 @@ import (
 func TestLogger(t *testing.T) {
 	t.Run("run in info mode should work", func(t *testing.T) {
 		s := submodule.CreateScope()
-		s.InitValue(ConfigMod, Config{
+		s.InitValue(LoggerConfigMod, &LoggerConfig{
 			LogLevel: "info",
 		})
 

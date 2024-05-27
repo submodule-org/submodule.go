@@ -7,7 +7,6 @@ import (
 )
 
 type db struct {
-	Config Config
 }
 
 type Db interface {
@@ -18,4 +17,4 @@ func (db *db) Query() {
 	fmt.Printf("queried")
 }
 
-var DbMod = submodule.Resolve[Db](&db{}, ConfigMod)
+var DbMod = submodule.Resolve[Db](&db{})

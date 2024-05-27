@@ -1,6 +1,10 @@
 package main
 
-import "github.com/submodule-org/submodule.go"
+import (
+	"net/http"
+
+	"github.com/submodule-org/submodule.go"
+)
 
 type emptyHandler struct {
 	Logger Logger
@@ -10,11 +14,13 @@ type emptyHandler struct {
 func (h *emptyHandler) Handle() {
 	h.Db.Query()
 	h.Logger.Log("Empty handler")
-
 }
 
-var EmptyHandlerMod = submodule.Resolve[Handler](
-	&emptyHandler{},
-	LoggerMod,
-	DbMod,
-)
+func (h *emptyHandler) AdaptToHTTPHandler(m *http.ServeMux) {
+	m.HandleFunc("/empty", func(w http.ResponseWriter, r *http.Request) {
+		h.Handle()
+		w.Write([]byte("empty"))
+	})
+}
+
+var emptyHandlerRoute = submodule.Resolve(&emptyHandler{}, LoggerMod, DbMod)
