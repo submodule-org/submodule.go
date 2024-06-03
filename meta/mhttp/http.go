@@ -1,36 +1,15 @@
 package mhttp
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/meta/mconfig"
+	"github.com/submodule-org/submodule.go/meta/mlogger"
 )
 
-type rawServerConfig struct {
-	Addr              string
-	KeepAlive         bool
-	ReadTimeout       string
-	ReadHeaderTimeout string
-	WriteTimeout      string
-	IdleTimeout       string
-	MaxHeaderBytes    string
-}
-
-var rawConfigMod = mconfig.CreateConfigWithPath("http", &rawServerConfig{
-	Addr:              ":8080",
-	KeepAlive:         true,
-	ReadTimeout:       "5s",
-	ReadHeaderTimeout: "5s",
-	WriteTimeout:      "5s",
-	IdleTimeout:       "60s",
-	MaxHeaderBytes:    "1M",
-})
-
-type serverConfig struct {
+type ServerConfig struct {
 	Addr              string
 	KeepAlive         bool
 	ReadTimeout       time.Duration
@@ -40,41 +19,35 @@ type serverConfig struct {
 	MaxHeaderBytes    uint64
 }
 
-var configMod = submodule.Make[*serverConfig](func(config *rawServerConfig) (s *serverConfig, e error) {
-	s = &serverConfig{}
-
-	s.ReadTimeout, e = time.ParseDuration(config.ReadTimeout)
-	if e != nil {
-		return nil, e
+func defaultServerConfig() ServerConfig {
+	return ServerConfig{
+		Addr:              ":8080",
+		KeepAlive:         true,
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       10 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
+}
 
-	s.ReadHeaderTimeout, e = time.ParseDuration(config.ReadHeaderTimeout)
-	if e != nil {
-		return nil, e
-	}
+var defaultServerConfigMod = submodule.Value(defaultServerConfig())
+var defaultHttpLogger = mlogger.CreateLogger("http")
 
-	s.WriteTimeout, e = time.ParseDuration(config.WriteTimeout)
-	if e != nil {
-		return nil, e
-	}
+func AlterConfig(c func(*ServerConfig)) {
+	mc := defaultServerConfig()
+	c(&mc)
+	Server.Append(submodule.Value(mc))
+}
 
-	s.IdleTimeout, e = time.ParseDuration(config.IdleTimeout)
-	if e != nil {
-		return nil, e
-	}
+func Reset() {
+	Server.Reset()
+}
 
-	s.MaxHeaderBytes, e = humanize.ParseBytes(config.MaxHeaderBytes)
-	if e != nil {
-		return nil, e
-	}
-
-	return s, nil
-}, rawConfigMod)
-
-var ServerMod = submodule.Make[*http.Server](func(self submodule.Self, config *serverConfig) *http.Server {
+var Server = submodule.MakeModifiable[*http.Server](func(self submodule.Self, config ServerConfig, logger *slog.Logger) *http.Server {
 	muxes := submodule.Find([]IntegrateWithHttpServer{}, self.Scope)
-	fmt.Printf("found %d handlers\n", len(muxes))
-	fmt.Printf("config %+vv\n", config)
+	logger.Debug("server is running with", "config", config)
+	logger.Debug("found_routes %v", "muxes", muxes)
 
 	rootMux := http.NewServeMux()
 
@@ -82,50 +55,14 @@ var ServerMod = submodule.Make[*http.Server](func(self submodule.Self, config *s
 		m.AdaptToHTTPHandler(rootMux)
 	}
 
-	s := &http.Server{Handler: rootMux}
+	s := &http.Server{
+		Handler: rootMux,
+		Addr:    config.Addr,
+	}
 
 	s.SetKeepAlivesEnabled(config.KeepAlive)
-	s.Addr = config.Addr
 	s.ReadTimeout = config.ReadTimeout
 	s.WriteTimeout = config.WriteTimeout
 
 	return s
-}, configMod)
-
-func Start() error {
-	server, e := ServerMod.SafeResolve()
-	if e != nil {
-		return e
-	}
-
-	return server.ListenAndServe()
-}
-
-func StartIn(scope submodule.Scope) error {
-	fmt.Printf("starting server")
-	server, e := ServerMod.SafeResolveWith(scope)
-	if e != nil {
-		return e
-	}
-
-	return server.ListenAndServe()
-}
-
-func Stop() error {
-	fmt.Printf("stopping server")
-	server, e := ServerMod.SafeResolve()
-	if e != nil {
-		return e
-	}
-
-	return server.Close()
-}
-
-func StopIn(scope submodule.Scope) error {
-	server, e := ServerMod.SafeResolveWith(scope)
-	if e != nil {
-		return e
-	}
-
-	return server.Close()
-}
+}, defaultServerConfigMod, defaultHttpLogger)

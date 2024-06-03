@@ -1,12 +1,14 @@
 package sample
 
 import (
-	"fmt"
+	"log/slog"
 
 	"github.com/submodule-org/submodule.go"
+	"github.com/submodule-org/submodule.go/meta/mlogger"
 )
 
 type db struct {
+	Logger *slog.Logger
 }
 
 type Db interface {
@@ -14,7 +16,7 @@ type Db interface {
 }
 
 func (db *db) Query() {
-	fmt.Printf("queried")
+	db.Logger.Info("queried")
 }
 
-var DbMod = submodule.Resolve[Db](&db{})
+var DbMod = submodule.Resolve[Db](&db{}, mlogger.CreateLogger("db"))

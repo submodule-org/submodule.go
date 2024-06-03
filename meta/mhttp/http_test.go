@@ -1,13 +1,14 @@
 package mhttp_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/submodule-org/submodule.go"
 	"github.com/submodule-org/submodule.go/meta/mhttp"
 )
@@ -22,64 +23,61 @@ func (h *Hello) AdaptToHTTPHandler(m *http.ServeMux) {
 
 var HelloRoute = submodule.Resolve(&Hello{})
 
+type MHTTPSuite struct {
+	suite.Suite
+	*require.Assertions
+	scope submodule.Scope
+
+	server *http.Server
+	e      error
+	port   int
+}
+
+func (s *MHTTPSuite) SetupSubTest() {
+	s.scope = submodule.CreateScope()
+	_, e := HelloRoute.SafeResolveWith(s.scope)
+	s.Require().Nil(e)
+}
+
+func (s *MHTTPSuite) TearDownSubTest() {
+	s.server, s.e = mhttp.Server.SafeResolveWith(s.scope)
+	s.Require().Nil(s.e)
+
+	go func() {
+		s.server.ListenAndServe()
+	}()
+
+	defer func() {
+		s.server.Close()
+	}()
+	defer s.scope.Dispose()
+	defer mhttp.Reset()
+
+	time.Sleep(200 * time.Millisecond)
+	r, e := http.Get(fmt.Sprintf("http://localhost:%d/hello", s.port))
+
+	s.Require().Nil(e)
+	s.Require().Equal(200, r.StatusCode)
+
+	body, e := io.ReadAll(r.Body)
+	s.Require().Nil(e)
+	s.Require().Equal("hello", string(body))
+
+}
+
+func (s *MHTTPSuite) TestCanChangePort() {
+	s.port = 28001
+
+	mhttp.AlterConfig(func(c *mhttp.ServerConfig) {
+		c.Addr = fmt.Sprintf(":%d", s.port)
+	})
+}
+
+func (s *MHTTPSuite) TestCanStartServer() {
+}
+
 func TestMHTTP(t *testing.T) {
-
-	t.Run("simple http server", func(t *testing.T) {
-		var e error
-		s := submodule.CreateScope()
-
-		_, e = HelloRoute.SafeResolveWith(s)
-		assert.Nil(t, e)
-
-		go func() {
-			mhttp.StartIn(s)
-		}()
-
-		defer func() {
-			mhttp.StopIn(s)
-		}()
-
-		time.Sleep(200 * time.Millisecond)
-		r, e := http.Get("http://localhost:8080/hello")
-
-		assert.Nil(t, e)
-		assert.Equal(t, 200, r.StatusCode)
-
-		body, e := io.ReadAll(r.Body)
-		assert.Nil(t, e)
-		assert.Equal(t, "hello", string(body))
+	suite.Run(t, &MHTTPSuite{
+		port: 8080,
 	})
-
-	t.Run("change port", func(t *testing.T) {
-		ov := os.Getenv("HTTP_ADDR")
-		defer os.Setenv("HTTP_ADDR", ov)
-
-		var e error
-		e = os.Setenv("HTTP_ADDR", ":30001")
-		assert.Nil(t, e)
-
-		s := submodule.CreateScope()
-
-		_, e = HelloRoute.SafeResolveWith(s)
-		assert.Nil(t, e)
-
-		go func() {
-			mhttp.StartIn(s)
-		}()
-
-		defer func() {
-			mhttp.StopIn(s)
-		}()
-
-		time.Sleep(200 * time.Millisecond)
-		r, e := http.Get("http://localhost:30001/hello")
-
-		assert.Nil(t, e)
-		assert.Equal(t, 200, r.StatusCode)
-
-		body, e := io.ReadAll(r.Body)
-		assert.Nil(t, e)
-		assert.Equal(t, "hello", string(body))
-	})
-
 }

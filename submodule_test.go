@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/submodule-org/submodule.go"
 )
 
@@ -286,6 +287,48 @@ func TestModuleFunction(t *testing.T) {
 		xy = x.ResolveWith(nestedStore)
 		assert.Equal(t, 1, xy.Count)
 
+	})
+
+	t.Run("use ResolveTo to init value", func(t *testing.T) {
+		x := submodule.Make[*Counter](func() *Counter {
+			return &Counter{
+				Count: 0,
+			}
+		})
+		var ax *Counter
+		var e error
+
+		x.ResolveTo(&Counter{Count: 1})
+		ax, e = x.SafeResolve()
+		require.Nil(t, e)
+		require.Equal(t, 1, ax.Count)
+
+		s := submodule.CreateScope()
+		x.ResolveToWith(s, &Counter{Count: 2})
+		ax, e = x.SafeResolveWith(s)
+		require.Nil(t, e)
+		require.Equal(t, 2, ax.Count)
+	})
+
+	t.Run("use modifiable submodule", func(t *testing.T) {
+		x := submodule.Value(5)
+
+		s := submodule.CreateScope()
+		y := submodule.MakeModifiable[int](func(x int) int {
+			return x + 1
+		}, x)
+
+		z, e := y.SafeResolveWith(s)
+		require.Nil(t, e)
+		require.Equal(t, 6, z)
+
+		e = s.Dispose()
+		require.Nil(t, e)
+
+		y.Append(submodule.Value(7))
+		z, e = y.SafeResolveWith(s)
+		require.Nil(t, e)
+		require.Equal(t, 8, z)
 	})
 }
 

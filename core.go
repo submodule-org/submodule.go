@@ -3,7 +3,16 @@ package submodule
 import (
 	"fmt"
 	"reflect"
+
+	"go.uber.org/zap"
 )
+
+var logger = zap.NewExample().Sugar()
+var isDebug = false
+
+func Debug(v bool) {
+	isDebug = v
+}
 
 var inType = reflect.TypeOf(In{})
 var selfType = reflect.TypeOf(Self{})
@@ -23,9 +32,11 @@ type Submodule[T any] interface {
 	Retrievable
 	SafeResolve() (T, error)
 	Resolve() T
+	ResolveTo(T)
 
-	ResolveWith(store Scope) T
-	SafeResolveWith(store Scope) (T, error)
+	ResolveWith(Scope) T
+	SafeResolveWith(Scope) (T, error)
+	ResolveToWith(Scope, T)
 }
 
 func (s *submodule[T]) SafeResolve() (t T, e error) {
@@ -42,13 +53,16 @@ func (s *submodule[T]) ResolveWith(as Scope) T {
 }
 
 func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
-	scope := GetStore()
+	logger.Debug("resolving", s.provideType, s.dependencies)
+
+	scope := globalScope
 	if as != nil {
 		scope = as
 	}
 
 	var v *value
 	if scope.has(s) {
+		logger.Debugf("cache hit, resolved %s using cache", s.provideType)
 		v = scope.get(s)
 	} else {
 		inputType := reflect.TypeOf(s.input)
@@ -105,6 +119,14 @@ func (s *submodule[T]) Resolve() T {
 	}
 
 	return r
+}
+
+func (s *submodule[T]) ResolveTo(t T) {
+	s.ResolveToWith(globalScope, t)
+}
+
+func (s *submodule[T]) ResolveToWith(as Scope, t T) {
+	as.InitValue(s, t)
 }
 
 func (s *submodule[T]) retrieve(scope Scope) (any, error) {

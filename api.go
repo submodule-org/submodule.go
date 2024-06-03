@@ -79,6 +79,14 @@ func Resolve[T any](t T, dependencies ...Retrievable) Submodule[T] {
 	}, dependencies...)
 }
 
+// Provide value as it is. Good to setup configurations, keeping types etc
+// as is
+func Value[T any](t T) Submodule[T] {
+	return construct[T](func() T {
+		return t
+	})
+}
+
 // Group groups submodules and re-advertise as a single value
 func Group[T any](s ...Retrievable) Submodule[[]T] {
 	return construct[[]T](func(self Self) []T {
@@ -96,8 +104,10 @@ func Group[T any](s ...Retrievable) Submodule[[]T] {
 	})
 }
 
+// Special type to facitliate dependency injection by struct. Meant to be embed
 type In struct{}
 
+// Find all instances of type T within the given scope
 func Find[T any](i []T, is Scope) []T {
 	t := reflect.TypeOf(i).Elem()
 	s := is.(*scope)
@@ -111,6 +121,8 @@ func Find[T any](i []T, is Scope) []T {
 	return i
 }
 
+// Self is a special type to facitliate dependency injection,
+// it will reflect the current dependency list and scope at execution time
 type Self struct {
 	Scope        Scope
 	Dependencies []Retrievable

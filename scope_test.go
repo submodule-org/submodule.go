@@ -8,6 +8,10 @@ import (
 	"github.com/submodule-org/submodule.go"
 )
 
+type k struct {
+	v int
+}
+
 func TestScope(t *testing.T) {
 	var seed int
 	intValue := submodule.Make[int](func(self submodule.Self) int {

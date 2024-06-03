@@ -8,6 +8,7 @@ import (
 func main() {
 	sample.EmptyHandlerRoute.Resolve()
 
-	mhttp.Start()
-	defer mhttp.Stop()
+	server := mhttp.Server.Resolve()
+	e := server.ListenAndServe()
+	panic(e)
 }

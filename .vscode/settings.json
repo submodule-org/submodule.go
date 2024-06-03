@@ -1,8 +1,0 @@
-{
-  "references.preferredLocation": "view",
-  "go.coverageOptions": "showUncoveredCodeOnly",
-  "go.coverOnTestPackage": true,
-  "go.formatTool": "gofumpt",
-  "go.inlayHints.assignVariableTypes": true,
-  "go.inlayHints.functionTypeParameters": true
-}

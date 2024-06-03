@@ -239,13 +239,8 @@ func CreateScope(fns ...ScopeOptsFn) Scope {
 		opt = fn(opt)
 	}
 
-	if opt.inherit {
-		s.inherit = true
-	}
-
-	if opt.parent != nil {
-		s.parent = opt.parent
-	}
+	s.inherit = opt.inherit
+	s.parent = opt.parent
 
 	if len(opt.middlewares) > 0 {
 		s.middleware = opt.middlewares

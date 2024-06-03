@@ -3,38 +3,45 @@ package mredis
 import (
 	"github.com/redis/go-redis/v9"
 	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/meta/mconfig"
 )
 
-type Client = redis.Client
-type Options = redis.Options
+type RedisClient = redis.Client
+type RedisOptions = redis.Options
 
-type rawRedisConfig struct {
-	Network    string
-	Addr       string
-	ClientName string
+type RedisConfig struct {
+	Url string
 }
 
-var rawRedisConfigMod = mconfig.CreateConfigWithPath("redis", &rawRedisConfig{
-	Network:    "tcp",
-	Addr:       "127.0.0.1:6379",
-	ClientName: "submodule",
-})
+var defaultRedisConfig = RedisConfig{
+	Url: "redis://localhost:6379",
+}
 
-var configMod = submodule.Make[*Options](func(rc *rawRedisConfig) (*Options, error) {
-	return &Options{
-		Network:    rc.Network,
-		Addr:       rc.Addr,
-		ClientName: rc.ClientName,
-	}, nil
-}, rawRedisConfigMod)
+func AlterConfig(c func(*RedisConfig)) {
+	mc := &RedisConfig{
+		Url: defaultRedisConfig.Url,
+	}
 
-var Mod = submodule.Make[*Client](func(self submodule.Self, config *Options) (*Client, error) {
-	client := redis.NewClient(config)
+	c(mc)
+	Client.Append(submodule.Value(*mc))
+}
+
+func Reset() {
+	Client.Reset()
+}
+
+var defaultRedisConfigMod = submodule.Value(defaultRedisConfig)
+
+var Client = submodule.MakeModifiable[*RedisClient](func(self submodule.Self, config RedisConfig) (*RedisClient, error) {
+	opts, e := redis.ParseURL(config.Url)
+	if e != nil {
+		return nil, e
+	}
+
+	client := redis.NewClient(opts)
 
 	self.Scope.AppendMiddleware(submodule.WithScopeEnd(func() error {
 		return client.Close()
 	}))
 
 	return client, nil
-}, configMod)
+}, defaultRedisConfigMod)

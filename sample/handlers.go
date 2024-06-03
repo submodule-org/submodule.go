@@ -1,25 +1,28 @@
 package sample
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 
 	"github.com/submodule-org/submodule.go"
+	"github.com/submodule-org/submodule.go/meta/mlogger"
 	"github.com/urfave/cli/v2"
 )
 
 type emptyHandler struct {
-	Logger Logger
+	Logger *slog.Logger
 	Db     Db
 }
 
-func (h *emptyHandler) Handle() {
+func (h *emptyHandler) Handle(ctx context.Context) {
 	h.Db.Query()
-	h.Logger.Log("Empty handler")
+	h.Logger.DebugContext(ctx, "empty handler")
 }
 
 func (h *emptyHandler) AdaptToHTTPHandler(m *http.ServeMux) {
 	m.HandleFunc("/empty", func(w http.ResponseWriter, r *http.Request) {
-		h.Handle()
+		h.Handle(r.Context())
 		w.Write([]byte("empty"))
 	})
 }
@@ -29,10 +32,10 @@ func (h *emptyHandler) AdaptToCLI(app *cli.App) {
 		Name:  "empty",
 		Usage: "empty handler",
 		Action: func(c *cli.Context) error {
-			h.Handle()
+			h.Handle(c.Context)
 			return nil
 		},
 	})
 }
 
-var EmptyHandlerRoute = submodule.Resolve(&emptyHandler{}, LoggerMod, DbMod)
+var EmptyHandlerRoute = submodule.Resolve(&emptyHandler{}, mlogger.CreateLogger("empty"), DbMod)
