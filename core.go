@@ -3,16 +3,7 @@ package submodule
 import (
 	"fmt"
 	"reflect"
-
-	"go.uber.org/zap"
 )
-
-var logger = zap.NewExample().Sugar()
-var isDebug = false
-
-func Debug(v bool) {
-	isDebug = v
-}
 
 var inType = reflect.TypeOf(In{})
 var selfType = reflect.TypeOf(Self{})
@@ -53,7 +44,10 @@ func (s *submodule[T]) ResolveWith(as Scope) T {
 }
 
 func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
-	logger.Debug("resolving", s.provideType, s.dependencies)
+	logger().Debug("resolving",
+		"targetType", s.provideType,
+		"dependencies", s.dependencies,
+	)
 
 	scope := globalScope
 	if as != nil {
@@ -62,8 +56,8 @@ func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
 
 	var v *value
 	if scope.has(s) {
-		logger.Debugf("cache hit, resolved %s using cache", s.provideType)
 		v = scope.get(s)
+		logger().Debug("cache hit", "targetType", s.provideType)
 	} else {
 		inputType := reflect.TypeOf(s.input)
 
