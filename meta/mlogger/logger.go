@@ -11,7 +11,7 @@ import (
 type LoggerConfig = zap.Config
 
 func defaultConfig() LoggerConfig {
-	return zap.NewProductionConfig()
+	return zap.NewDevelopmentConfig()
 }
 
 var defaultConfigMod = submodule.Value(defaultConfig())
