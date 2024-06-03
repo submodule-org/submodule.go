@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -35,7 +35,7 @@ type MHTTPSuite struct {
 
 func (s *MHTTPSuite) SetupSubTest() {
 	s.scope = submodule.CreateScope()
-	_, e := HelloRoute.SafeResolveWith(s.scope)
+	e := mhttp.ResolveRoutesIn(s.scope, HelloRoute)
 	s.Require().Nil(e)
 }
 
@@ -43,7 +43,10 @@ func (s *MHTTPSuite) TearDownSubTest() {
 	s.server, s.e = mhttp.Server.SafeResolveWith(s.scope)
 	s.Require().Nil(s.e)
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
+		wg.Done()
 		s.server.ListenAndServe()
 	}()
 
@@ -53,7 +56,7 @@ func (s *MHTTPSuite) TearDownSubTest() {
 	defer s.scope.Dispose()
 	defer mhttp.Reset()
 
-	time.Sleep(200 * time.Millisecond)
+	wg.Wait()
 	r, e := http.Get(fmt.Sprintf("http://localhost:%d/hello", s.port))
 
 	s.Require().Nil(e)

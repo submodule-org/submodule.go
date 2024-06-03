@@ -66,3 +66,18 @@ var Server = submodule.MakeModifiable[*http.Server](func(self submodule.Self, co
 
 	return s
 }, defaultServerConfigMod, defaultHttpLogger)
+
+func ResolveRoutes[T IntegrateWithHttpServer](routes ...submodule.Submodule[T]) error {
+	return ResolveRoutesIn(submodule.GetStore(), routes...)
+}
+
+func ResolveRoutesIn[T IntegrateWithHttpServer](scope submodule.Scope, routes ...submodule.Submodule[T]) error {
+	for _, r := range routes {
+		_, e := r.SafeResolveWith(scope)
+		if e != nil {
+			return e
+		}
+	}
+
+	return nil
+}

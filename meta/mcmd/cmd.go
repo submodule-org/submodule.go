@@ -1,15 +1,13 @@
 package mcmd
 
 import (
-	"os"
-
 	"github.com/submodule-org/submodule.go"
 	"github.com/urfave/cli/v2"
 )
 
 type Cmd = *cli.Command
 
-var Mod = submodule.Make[*cli.App](func(self submodule.Self) *cli.App {
+var App = submodule.Make[*cli.App](func(self submodule.Self) *cli.App {
 	root := &cli.App{}
 
 	cmds := submodule.Find([]IntegrateWithUrfave{}, self.Scope)
@@ -21,20 +19,17 @@ var Mod = submodule.Make[*cli.App](func(self submodule.Self) *cli.App {
 	return root
 })
 
-func Start() error {
-	root, e := Mod.SafeResolve()
-	if e != nil {
-		return e
-	}
-
-	return root.Run(os.Args)
+func ResolveCmds[T IntegrateWithUrfave](routes ...submodule.Submodule[T]) error {
+	return ResolveRoutesIn(submodule.GetStore(), routes...)
 }
 
-func StartInScope(scope submodule.Scope) error {
-	root, e := Mod.SafeResolveWith(scope)
-	if e != nil {
-		return e
+func ResolveRoutesIn[T IntegrateWithUrfave](scope submodule.Scope, routes ...submodule.Submodule[T]) error {
+	for _, r := range routes {
+		_, e := r.SafeResolveWith(scope)
+		if e != nil {
+			return e
+		}
 	}
 
-	return root.Run(os.Args)
+	return nil
 }

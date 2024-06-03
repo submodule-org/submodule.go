@@ -6,9 +6,12 @@ import (
 )
 
 func main() {
-	sample.EmptyHandlerRoute.Resolve()
+	e := mhttp.ResolveRoutes(sample.EmptyHandlerRoute)
+	if e != nil {
+		panic(e)
+	}
 
 	server := mhttp.Server.Resolve()
-	e := server.ListenAndServe()
+	e = server.ListenAndServe()
 	panic(e)
 }
