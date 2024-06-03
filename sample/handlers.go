@@ -7,15 +7,18 @@ import (
 
 	"github.com/submodule-org/submodule.go"
 	"github.com/submodule-org/submodule.go/meta/mlogger"
+	"github.com/submodule-org/submodule.go/meta/mredis"
 	"github.com/urfave/cli/v2"
 )
 
 type emptyHandler struct {
 	Logger *slog.Logger
 	Db     Db
+	Client *mredis.RedisClient
 }
 
 func (h *emptyHandler) Handle(ctx context.Context) {
+	h.Client.Info(ctx)
 	h.Db.Query()
 	h.Logger.DebugContext(ctx, "empty handler")
 }
@@ -38,4 +41,4 @@ func (h *emptyHandler) AdaptToCLI(app *cli.App) {
 	})
 }
 
-var EmptyHandlerRoute = submodule.Resolve(&emptyHandler{}, mlogger.CreateLogger("empty"), DbMod)
+var EmptyHandlerRoute = submodule.Resolve(&emptyHandler{}, mlogger.CreateLogger("empty"), DbMod, mredis.Client)

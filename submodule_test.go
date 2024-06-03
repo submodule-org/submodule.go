@@ -330,6 +330,7 @@ func TestModuleFunction(t *testing.T) {
 		require.Nil(t, e)
 		require.Equal(t, 8, z)
 	})
+
 }
 
 type Counter struct {

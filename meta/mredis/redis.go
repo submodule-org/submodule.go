@@ -1,6 +1,8 @@
 package mredis
 
 import (
+	"context"
+
 	"github.com/redis/go-redis/v9"
 	"github.com/submodule-org/submodule.go"
 )
@@ -38,6 +40,11 @@ var Client = submodule.MakeModifiable[*RedisClient](func(self submodule.Self, co
 	}
 
 	client := redis.NewClient(opts)
+	e = client.Ping(context.TODO()).Err()
+
+	if e != nil {
+		return nil, e
+	}
 
 	self.Scope.AppendMiddleware(submodule.WithScopeEnd(func() error {
 		return client.Close()

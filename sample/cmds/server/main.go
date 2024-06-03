@@ -11,6 +11,10 @@ func main() {
 		panic(e)
 	}
 
+	mhttp.AlterConfig(func(c *mhttp.ServerConfig) {
+		c.Addr = ":19000"
+	})
+
 	server := mhttp.Server.Resolve()
 	e = server.ListenAndServe()
 	panic(e)

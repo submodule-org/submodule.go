@@ -105,9 +105,9 @@ func Group[T any](s ...Retrievable) Submodule[[]T] {
 }
 
 // Special type to facitliate dependency injection by struct. Meant to be embed
-type In struct{}
+type In struct {
+}
 
-// Find all instances of type T within the given scope
 func Find[T any](i []T, is Scope) []T {
 	t := reflect.TypeOf(i).Elem()
 	s := is.(*scope)
