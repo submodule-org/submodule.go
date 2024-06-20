@@ -14,20 +14,49 @@ type submodule[T any] struct {
 	dependencies []Retrievable
 }
 
+// Non generic representation of a submodule
 type Retrievable interface {
 	retrieve(Scope) (any, error)
 	canResolve(reflect.Type) bool
 }
 
+// Submodule is a container holding a factory and its meta information
+// Submodule will not hold the result on its own, but rather resolving it against a scope
 type Submodule[T any] interface {
 	Retrievable
+
+	// Substitute the implementation with another submodule. Very useful for testing as well as changing reusable graph
+	// Be warned that this may cause a circular dependency
+	Substitute(Submodule[T])
+
+	// SafeResolve will resolve the submodule against the global scope and giving out errors of the factory and all of its dependencies
 	SafeResolve() (T, error)
+
+	// Resolve will resolve the submodule against the global scope. If the factory function or any of its dependencies return an error, panic will be called
 	Resolve() T
+
+	// Force the submodule to resolve to specific value to the global scope
 	ResolveTo(T)
 
+	// Same as resolve, but with a scope
 	ResolveWith(Scope) T
+
+	// Same as SafeResolve, but with a scope
 	SafeResolveWith(Scope) (T, error)
+
+	// Same as ResolveTo, but with a scope
 	ResolveToWith(Scope, T)
+}
+
+func (s *submodule[T]) Substitute(other Submodule[T]) {
+	o, ok := other.(*submodule[T])
+	if !ok {
+		panic(fmt.Sprintf("only submodule can be substituted, received: %v", reflect.TypeOf(other)))
+	}
+
+	s.input = o.input
+	s.provideType = o.provideType
+	s.dependencies = o.dependencies
 }
 
 func (s *submodule[T]) SafeResolve() (t T, e error) {
