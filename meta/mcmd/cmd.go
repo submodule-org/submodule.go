@@ -1,7 +1,7 @@
 package mcmd
 
 import (
-	"github.com/submodule-org/submodule.go"
+	"github.com/submodule-org/submodule.go/v2"
 	"github.com/urfave/cli/v2"
 )
 

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/submodule-org/submodule.go/meta/mhttp"
-	"github.com/submodule-org/submodule.go/sample"
+	"github.com/submodule-org/submodule.go/v2/meta/mhttp"
+	"github.com/submodule-org/submodule.go/v2/sample"
 )
 
 func main() {

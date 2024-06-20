@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/meta/mlogger"
-	"github.com/submodule-org/submodule.go/meta/mredis"
+	"github.com/submodule-org/submodule.go/v2"
+	"github.com/submodule-org/submodule.go/v2/meta/mlogger"
+	"github.com/submodule-org/submodule.go/v2/meta/mredis"
 	"github.com/urfave/cli/v2"
 )
 

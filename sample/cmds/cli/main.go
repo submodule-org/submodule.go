@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/submodule-org/submodule.go/meta/mcmd"
-	"github.com/submodule-org/submodule.go/sample"
+	"github.com/submodule-org/submodule.go/v2/meta/mcmd"
+	"github.com/submodule-org/submodule.go/v2/sample"
 )
 
 func main() {

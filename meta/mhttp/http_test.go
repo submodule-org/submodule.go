@@ -9,8 +9,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/meta/mhttp"
+	"github.com/submodule-org/submodule.go/v2"
+	"github.com/submodule-org/submodule.go/v2/meta/mhttp"
 )
 
 type Hello struct{}

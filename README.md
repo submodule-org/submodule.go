@@ -33,7 +33,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/submodule-org/submodule.go"
+	"github.com/submodule-org/submodule.go/v2"
 )
 
 type Config struct {

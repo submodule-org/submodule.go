@@ -3,7 +3,7 @@ package mlogger
 import (
 	"log/slog"
 
-	"github.com/submodule-org/submodule.go"
+	"github.com/submodule-org/submodule.go/v2"
 	"go.uber.org/zap"
 	"go.uber.org/zap/exp/zapslog"
 )

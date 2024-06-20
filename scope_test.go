@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/submodule-org/submodule.go"
+	"github.com/submodule-org/submodule.go/v2"
 )
 
 type k struct {

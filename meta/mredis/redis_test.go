@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/meta/mredis"
+	"github.com/submodule-org/submodule.go/v2"
+	"github.com/submodule-org/submodule.go/v2/meta/mredis"
 	"github.com/testcontainers/testcontainers-go/modules/redis"
 )
 

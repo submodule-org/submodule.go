@@ -1,4 +1,4 @@
-module github.com/submodule-org/submodule.go
+module github.com/submodule-org/submodule.go/v2
 
 go 1.22.1
 

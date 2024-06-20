@@ -5,8 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/submodule-org/submodule.go"
-	"github.com/submodule-org/submodule.go/meta/mlogger"
+	"github.com/submodule-org/submodule.go/v2"
+	"github.com/submodule-org/submodule.go/v2/meta/mlogger"
 )
 
 type RedisClient = redis.Client
