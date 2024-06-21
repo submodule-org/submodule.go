@@ -19,6 +19,11 @@ type scope struct {
 	middleware []Middleware
 }
 
+// A scope is a container for retrievable values.
+// To simplify the understanding, a scope is a map, where
+// a key is a submodule reference and a value is what will be provided by the factory.
+//
+// A scope comes with its life-cycle where any submodules can hook to
 type Scope interface {
 	get(g Retrievable) *value
 	has(g Retrievable) bool
@@ -99,6 +104,8 @@ func (s *scope) initValue(g Retrievable, v reflect.Value) *value {
 	return value
 }
 
+// A scope can enforce a submodule to be a specific value no matter what its factory returns.
+// This is useful to simulate test scenarios
 func (s *scope) InitValue(g Retrievable, v any) {
 	s.initValue(g, reflect.ValueOf(v))
 
@@ -120,16 +127,20 @@ func (s *scope) initError(g Retrievable, e reflect.Value) *value {
 	return value
 }
 
+// A scope can enforce a submodule to be a specific value no matter what its factory returns.
+// This is useful to simulate test scenarios
 func (s *scope) InitError(g Retrievable, e error) {
 	s.initError(g, reflect.ValueOf(e))
 }
 
+// Apply middleware to a scope
 func (s *scope) Apply(submodule Submodule[Middleware]) {
 	m := submodule.ResolveWith(s)
 
 	s.AppendMiddleware(m)
 }
 
+// Dispose scope to free up all resolved values and trigger scope end middlewares
 func (s *scope) Dispose() error {
 	for _, m := range s.middleware {
 		if m.hasOnScopeEnd {
@@ -150,25 +161,32 @@ func (s *scope) Dispose() error {
 	return nil
 }
 
+// Append middleware to the scope
 func (s *scope) AppendMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, m)
 }
 
+// Append global middleware to the global scope
 func AppendGlobalMiddleware(ms ...Middleware) {
 	for _, m := range ms {
 		globalScope.AppendMiddleware(m)
 	}
 }
 
+// Dispose global scope to free up all resolved values and trigger scope end middlewares
 func DisposeGlobalScope() error {
 	return globalScope.Dispose()
 }
 
-func Apply(s Submodule[Middleware]) {
-	m := s.Resolve()
-	globalScope.AppendMiddleware(m)
+// Apply middleware to the global scope
+func Apply(s Middleware) {
+	globalScope.AppendMiddleware(s)
 }
 
+// A middleware can add behaviors to a scope via decorator pattern.
+// There are two types of middlewares
+// - a decorator to specific type that will be resolved in the scope
+// - a scope end that will be called when the scope is disposed
 type Middleware struct {
 	hasOnScopeResolve bool
 	hasOnScopeEnd     bool
@@ -229,6 +247,7 @@ func WithMiddlewares(middlewares ...Middleware) ScopeOptsFn {
 	}
 }
 
+// Create a new scope with modifiers
 func CreateScope(fns ...ScopeOptsFn) Scope {
 	s := &scope{
 		values: make(map[Retrievable]*value),
@@ -254,6 +273,7 @@ var globalScope = CreateScope(
 	WithParent(nil),
 )
 
+// Return the global scope
 func GetStore() Scope {
 	return globalScope
 }

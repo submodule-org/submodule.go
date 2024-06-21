@@ -16,6 +16,10 @@ type modifiableSubmodule[T any] struct {
 	modifiers []Retrievable
 }
 
+func (m *modifiableSubmodule[T]) Substitute(other Submodule[T]) {
+	m.submodule.Substitute(other)
+}
+
 // Resolve implements ModifiableSubmodule.
 func (m *modifiableSubmodule[T]) Resolve() T {
 	return m.submodule.Resolve()
@@ -64,6 +68,7 @@ func (m *modifiableSubmodule[T]) Reset() {
 	m.modifiers = []Retrievable{}
 }
 
+// Modifiable constructor. Parameters are the same as Make
 func MakeModifiable[T any](fn any, dependencies ...Retrievable) ModifiableSubmodule[T] {
 	xs := &modifiableSubmodule[T]{
 		modifiers: []Retrievable{},
