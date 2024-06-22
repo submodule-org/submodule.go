@@ -1,5 +1,6 @@
 # Managing dependency with Submodule
 
+![Go Test](https://github.com/submodule-org/submodule.go/actions/workflows/go-test.yml/badge.svg)
 ![common case](common-case.png "Common case")
 
 Does the demonstrated diagram look familiar to you? A lot of applications will look just like so.
