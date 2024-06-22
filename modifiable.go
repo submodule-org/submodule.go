@@ -7,7 +7,7 @@ import "reflect"
 // That'll help the submodule to be way easier to reconfigure (for example, sharing loggers) without missing the default settings
 type ModifiableSubmodule[T any] interface {
 	Submodule[T]
-	Append(submodule Retrievable)
+	Append(submodule ...Retrievable)
 	Reset()
 }
 
@@ -60,8 +60,11 @@ func (m *modifiableSubmodule[T]) retrieve(s Scope) (any, error) {
 	return m.submodule.retrieve(s)
 }
 
-func (m *modifiableSubmodule[T]) Append(submodule Retrievable) {
-	m.modifiers = append(m.modifiers, submodule)
+func (m *modifiableSubmodule[T]) Append(submodule ...Retrievable) {
+	if len(submodule) == 0 {
+		return
+	}
+	m.modifiers = append(m.modifiers, submodule...)
 }
 
 func (m *modifiableSubmodule[T]) Reset() {

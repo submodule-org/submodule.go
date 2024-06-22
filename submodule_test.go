@@ -330,7 +330,33 @@ func TestModuleFunction(t *testing.T) {
 		require.Nil(t, e)
 		require.Equal(t, 8, z)
 	})
+	t.Run("use variadic modifiable submodule", func(t *testing.T) {
+		type (
+			num1 int
+			num2 int
+		)
+		x := submodule.Value[num1](0)
+		y := submodule.Value[num2](0)
 
+		s := submodule.CreateScope()
+
+		type nums struct {
+			x num1
+			y num2
+		}
+
+		m := submodule.MakeModifiable[nums](func(x num1, y num2) nums {
+			return nums{x, y}
+		}, x, y)
+
+		m.Append(
+			submodule.Value[num1](1),
+			submodule.Value[num2](2),
+		)
+		rs, e := m.SafeResolveWith(s)
+		require.Nil(t, e)
+		require.Equal(t, nums{1, 2}, rs)
+	})
 }
 
 type Counter struct {
