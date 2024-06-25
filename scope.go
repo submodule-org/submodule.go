@@ -1,6 +1,7 @@
 package submodule
 
 import (
+	"context"
 	"reflect"
 	"sync"
 )
@@ -34,7 +35,8 @@ type Scope interface {
 	InitError(g Retrievable, e error)
 
 	Dispose() error
-	AppendMiddleware(Middleware)
+	DisposeWithContext(ctx context.Context) error
+	AppendMiddleware(...Middleware)
 	Apply(Submodule[Middleware])
 }
 
@@ -140,42 +142,92 @@ func (s *scope) Apply(submodule Submodule[Middleware]) {
 	s.AppendMiddleware(m)
 }
 
-// Dispose scope to free up all resolved values and trigger scope end middlewares
-func (s *scope) Dispose() error {
-	for _, m := range s.middleware {
-		if m.hasOnScopeEnd {
-			e := m.onScopeEnd()
-			if e != nil {
-				return e
-			}
-		}
-	}
-
+// remove all values in the scope
+func (s *scope) release() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	for k := range s.values {
 		delete(s.values, k)
 	}
+}
 
+type middlewareCaller func(Middleware) error
+
+func (s *scope) dispose(cond middlewareCaller) error {
+	for _, m := range s.middleware {
+		if m.hasOnScopeEnd {
+			if err := cond(m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+var disposeCond = func(m Middleware) error {
+	if m.onScopeEnd != nil {
+		return m.onScopeEnd()
+	}
+	return nil
+}
+
+var disposeWithContextCond = func(ctx context.Context) func(m Middleware) error {
+	return func(m Middleware) error {
+		if m.onScopeEndWithContext != nil {
+			return m.onScopeEndWithContext(ctx)
+		}
+		return nil
+	}
+}
+
+// DisposeWithContext dispose scope with context
+func (s *scope) DisposeWithContext(ctx context.Context) error {
+	if err := s.dispose(disposeWithContextCond(ctx)); err != nil {
+		return err
+	}
+	if err := s.dispose(disposeCond); err != nil {
+		return err
+	}
+	s.release()
+	return nil
+}
+
+// Dispose scope to free up all resolved values and trigger scope end middlewares
+func (s *scope) Dispose() error {
+	if err := s.dispose(disposeWithContextCond(context.TODO())); err != nil {
+		return err
+	}
+	if err := s.dispose(disposeCond); err != nil {
+		return err
+	}
+	s.release()
 	return nil
 }
 
 // Append middleware to the scope
-func (s *scope) AppendMiddleware(m Middleware) {
-	s.middleware = append(s.middleware, m)
+func (s *scope) AppendMiddleware(m ...Middleware) {
+	if len(m) == 0 {
+		return
+	}
+	s.middleware = append(s.middleware, m...)
 }
 
 // Append global middleware to the global scope
 func AppendGlobalMiddleware(ms ...Middleware) {
-	for _, m := range ms {
-		globalScope.AppendMiddleware(m)
+	if len(ms) == 0 {
+		return
 	}
+	globalScope.AppendMiddleware(ms...)
 }
 
 // Dispose global scope to free up all resolved values and trigger scope end middlewares
 func DisposeGlobalScope() error {
 	return globalScope.Dispose()
+}
+
+func DisposeGlobalScopeWithContext(ctx context.Context) error {
+	return globalScope.DisposeWithContext(ctx)
 }
 
 // Apply middleware to the global scope
@@ -194,7 +246,8 @@ type Middleware struct {
 	onScopeResolveType reflect.Type
 	onScopeResolve     reflect.Value
 
-	onScopeEnd func() error
+	onScopeEnd            func() error
+	onScopeEndWithContext func(context.Context) error
 }
 
 type MiddlewareFn func(Middleware) Middleware
@@ -211,6 +264,13 @@ func WithScopeEnd(fn func() error) Middleware {
 	return Middleware{
 		hasOnScopeEnd: true,
 		onScopeEnd:    fn,
+	}
+}
+
+func WithContextScopeEnd(fn func(context.Context) error) Middleware {
+	return Middleware{
+		hasOnScopeEnd:         true,
+		onScopeEndWithContext: fn,
 	}
 }
 
