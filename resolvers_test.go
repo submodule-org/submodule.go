@@ -11,6 +11,10 @@ var intValue = Make[int](func() int {
 	return 100
 })
 
+var anyValue = Make[any](func(v any) any {
+	return v
+}, intValue)
+
 var stringValue = Make[string](func() string {
 	return "hello"
 })
@@ -39,6 +43,10 @@ func TestResolver(t *testing.T) {
 		assert.Nil(t, e)
 		assert.Equal(t, 100, v.Int)
 		assert.Equal(t, "hello", v.String)
+	})
+	t.Run("can resolve type", func(t *testing.T) {
+		store := CreateScope()
+		anyValue.ResolveWith(store)
 	})
 
 	t.Run("can resolve embedded type", func(t *testing.T) {

@@ -155,9 +155,9 @@ func (s *scope) release() {
 type middlewareCaller func(Middleware) error
 
 func (s *scope) dispose(cond middlewareCaller) error {
-	for _, m := range s.middleware {
-		if m.hasOnScopeEnd {
-			if err := cond(m); err != nil {
+	for i := len(s.middleware) - 1; i >= 0; i-- {
+		if s.middleware[i].hasOnScopeEnd {
+			if err := cond(s.middleware[i]); err != nil {
 				return err
 			}
 		}

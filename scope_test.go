@@ -29,6 +29,10 @@ func TestScope(t *testing.T) {
 		return seed
 	})
 
+	stringValue := submodule.Make[string](func(self submodule.Self) string {
+		return "hello"
+	})
+
 	replaceInt := submodule.WithScopeResolve(func(i int) int {
 		fmt.Println("replacing 0 with 4")
 		return i + 1
@@ -47,6 +51,7 @@ func TestScope(t *testing.T) {
 	v := intValue.ResolveWith(scope)
 	assert.Equal(t, 1, v)
 
+	stringValue.ResolveWith(scope)
 	e := scope.Dispose()
 	assert.Nil(t, e)
 
