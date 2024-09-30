@@ -112,7 +112,12 @@ func (s *submodule[T]) SafeResolveWith(as Scope) (t T, e error) {
 			args[i] = v
 		}
 
-		result := reflect.ValueOf(s.input).Call(args)
+		var result []reflect.Value
+		if inputType.IsVariadic() {
+			result = reflect.ValueOf(s.input).CallSlice(args)
+		} else {
+			result = reflect.ValueOf(s.input).Call(args)
+		}
 		if len(result) == 1 {
 			v = scope.initValue(s, result[0])
 		} else {
