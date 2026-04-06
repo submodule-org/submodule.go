@@ -1,7 +1,7 @@
 {
   "name": "submodule-go",
   "description": "DI framework skill for submodule.go - guides correct usage of Make, Resolve, Value, Group, scopes, testing with mocks, middleware, and anti-patterns",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "submodule-org"
   },
