@@ -1,0 +1,15 @@
+{
+  "name": "submodule-go-marketplace",
+  "description": "DI framework skill for submodule.go - correct usage of Make, Resolve, Value, Group, scopes, testing, mocking, and anti-patterns",
+  "owner": {
+    "name": "submodule-org"
+  },
+  "plugins": [
+    {
+      "name": "submodule-go",
+      "description": "Guide for using the submodule.go DI framework — registration, testing with isolated scopes, mocking via ResolveToWith, middleware, and anti-pattern prevention",
+      "version": "1.0.0",
+      "source": "./"
+    }
+  ]
+}

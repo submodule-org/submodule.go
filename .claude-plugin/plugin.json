@@ -1,0 +1,23 @@
+{
+  "name": "submodule-go",
+  "description": "DI framework skill for submodule.go - guides correct usage of Make, Resolve, Value, Group, scopes, testing with mocks, middleware, and anti-patterns",
+  "version": "1.0.0",
+  "author": {
+    "name": "submodule-org"
+  },
+  "homepage": "https://github.com/submodule-org/submodule.go",
+  "repository": "https://github.com/submodule-org/submodule.go",
+  "license": "MIT",
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "keywords": [
+    "go",
+    "golang",
+    "dependency-injection",
+    "di",
+    "submodule",
+    "testing",
+    "mocking",
+    "scope"
+  ]
+}

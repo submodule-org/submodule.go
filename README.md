@@ -92,3 +92,18 @@ func main() {
 }
 
 ```
+
+# Claude Code Plugin
+
+This repo includes a Claude Code plugin that teaches Claude how to use submodule.go correctly — DI registration, testing with isolated scopes, mocking, anti-patterns, and more.
+
+## Install
+
+```bash
+/plugin marketplace add submodule-org/submodule.go
+/plugin install submodule-go@submodule-go-marketplace
+```
+
+## Usage
+
+Use the `/submodule-go` slash command, or the skill triggers automatically when working with `submodule.go` imports.
