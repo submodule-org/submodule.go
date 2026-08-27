@@ -360,11 +360,11 @@ func TestModuleFunction(t *testing.T) {
 
 	t.Run("can resolve variadic function", func(t *testing.T) {
 		initMod := submodule.Value[int](0)
-		aMod := submodule.Value[[]int]([]int{1,2,3})
-		sumMod := submodule.Make[int](func (init int, a ...int) int {
+		aMod := submodule.Value[[]int]([]int{1, 2, 3})
+		sumMod := submodule.Make[int](func(init int, a ...int) int {
 			sum := init
-			for _,v:=range a {
-				sum+=v
+			for _, v := range a {
+				sum += v
 			}
 			return sum
 		}, aMod, initMod)
