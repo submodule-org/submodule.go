@@ -88,15 +88,18 @@ func (s *scope) initValue(g Retrievable, v reflect.Value) *value {
 		return s.get(g)
 	}
 
-	args := []reflect.Value{v}
+	// Applicability is decided by the type the submodule declares, so an
+	// earlier middleware widening the value does not change which of the
+	// later ones run.
+	resolved := v
 	for _, m := range s.middleware {
 		if m.hasOnScopeResolve && v.Type().AssignableTo(m.onScopeResolveType) {
-			args = m.onScopeResolve.Call(args)
+			resolved = m.onScopeResolve(resolved)
 		}
 	}
 
 	value := &value{
-		value: args[0],
+		value: resolved,
 	}
 
 	s.mu.Lock()
@@ -244,7 +247,7 @@ type Middleware struct {
 	hasOnScopeEnd     bool
 
 	onScopeResolveType reflect.Type
-	onScopeResolve     reflect.Value
+	onScopeResolve     func(reflect.Value) reflect.Value
 
 	onScopeEnd            func() error
 	onScopeEndWithContext func(context.Context) error
@@ -255,8 +258,22 @@ type MiddlewareFn func(Middleware) Middleware
 func WithScopeResolve[T any](fn func(T) T) Middleware {
 	return Middleware{
 		hasOnScopeResolve:  true,
-		onScopeResolveType: reflect.TypeOf(fn).In(0),
-		onScopeResolve:     reflect.ValueOf(fn),
+		onScopeResolveType: reflect.TypeFor[T](),
+		onScopeResolve: func(v reflect.Value) reflect.Value {
+			t, ok := v.Interface().(T)
+			if !ok {
+				// An earlier middleware replaced the value with one this
+				// decorator cannot accept. Passing it through keeps the chain
+				// alive instead of failing mid-resolution.
+				return v
+			}
+
+			r := fn(t)
+
+			// &r is a *T, so Elem() carries T as its static type. That mirrors
+			// what reflect.Value.Call returned and keeps nil interfaces valid.
+			return reflect.ValueOf(&r).Elem()
+		},
 	}
 }
 
