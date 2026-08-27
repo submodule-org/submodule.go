@@ -95,12 +95,11 @@ func Test_Middleware_Widening_Before_Typed(t *testing.T) {
 	assert.Equal(t, 101, mod.ResolveWith(scope))
 }
 
-// Characterization: the value stored in the scope carries the middleware's
-// declared return type as its STATIC type, not the concrete dynamic type.
-// A func(any) any middleware therefore widens the stored type to interface{},
-// which makes the value unreachable through Find[int]. This pins the current
-// behaviour so the de-reflection refactor cannot silently alter it.
-func Test_Middleware_Preserves_Declared_Static_Type(t *testing.T) {
+// A decorator may declare a wider type than the submodule provides, with
+// func(any) any as the common catch-everything case. That must not change how
+// the scope stores the value: storing it under the widened interface{} type
+// hides it from Find.
+func Test_Middleware_Widening_Keeps_Value_Findable(t *testing.T) {
 	widen := submodule.WithScopeResolve(func(i any) any { return i })
 
 	mod := submodule.Make[int](func() int { return 3 })
@@ -113,6 +112,31 @@ func Test_Middleware_Preserves_Declared_Static_Type(t *testing.T) {
 
 	assert.Equal(t, []int{3}, submodule.Find([]int{}, plain),
 		"without a widening middleware the int is stored as int")
-	assert.Empty(t, submodule.Find([]int{}, widened),
-		"func(any) any widens the stored static type to interface{}")
+	assert.Equal(t, []int{3}, submodule.Find([]int{}, widened),
+		"a widening middleware must not hide the value from Find")
+}
+
+// Narrowing back must use the type the submodule declares, not the concrete
+// dynamic type, so an interface-providing submodule stays stored as the
+// interface.
+func Test_Middleware_Widening_Keeps_Interface_Type(t *testing.T) {
+	widen := submodule.WithScopeResolve(func(i any) any { return i })
+
+	mod := submodule.Make[greeter](func() greeter { return greeterImpl{msg: "hi"} })
+	scope := submodule.CreateScope(submodule.WithMiddlewares(widen))
+
+	assert.Equal(t, "hi", mod.ResolveWith(scope).Greet())
+	assert.Len(t, submodule.Find([]greeter{}, scope), 1)
+}
+
+// A widening decorator that genuinely replaces the value must still store the
+// replacement under the submodule's declared type.
+func Test_Middleware_Widening_Replaces_Value(t *testing.T) {
+	widen := submodule.WithScopeResolve(func(i any) any { return 99 })
+
+	mod := submodule.Make[int](func() int { return 3 })
+	scope := submodule.CreateScope(submodule.WithMiddlewares(widen))
+
+	assert.Equal(t, 99, mod.ResolveWith(scope))
+	assert.Equal(t, []int{99}, submodule.Find([]int{}, scope))
 }

@@ -83,6 +83,33 @@ func (s *scope) get(g Retrievable) *value {
 	return v
 }
 
+// A resolve middleware may declare a wider type than the submodule provides,
+// func(any) any being the common catch-everything case. The scope indexes
+// values by their static type, so a widened value would become unreachable
+// through Find. Put the decorated value back under the declared type whenever
+// it still fits, keeping the interface itself when that is what was declared.
+func narrowTo(v reflect.Value, declared reflect.Type) reflect.Value {
+	if !v.IsValid() || v.Type() == declared {
+		return v
+	}
+
+	if v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return reflect.Zero(declared)
+		}
+		v = v.Elem()
+	}
+
+	if !v.Type().AssignableTo(declared) {
+		return v
+	}
+
+	narrowed := reflect.New(declared).Elem()
+	narrowed.Set(v)
+
+	return narrowed
+}
+
 func (s *scope) initValue(g Retrievable, v reflect.Value) *value {
 	if s.has(g) {
 		return s.get(g)
@@ -96,6 +123,10 @@ func (s *scope) initValue(g Retrievable, v reflect.Value) *value {
 		if m.hasOnScopeResolve && v.Type().AssignableTo(m.onScopeResolveType) {
 			resolved = m.onScopeResolve(resolved)
 		}
+	}
+
+	if v.IsValid() {
+		resolved = narrowTo(resolved, v.Type())
 	}
 
 	value := &value{
